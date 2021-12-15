@@ -1,0 +1,4 @@
+Component,Origin,License,Copyright
+libuv,https://github.com/libuv/libuv,MIT,Copyright (c) 2015-present libuv project contributors
+protobuf-c,https://github.com/protobuf-c/protobuf-c,BSD-2-Clause,Copyright (c) 2008-2016 Dave Benson and the protobuf-c authors
+protobuf,https://github.com/protocolbuffers/protobuf,BSD-3-Clause,Copyright 2008 Google Inc
