@@ -36,10 +36,11 @@ then you may not need to adjust any of them:
  - `DD_ENV`: defaults to the empty string.
  - `DD_SERVICE`: defaults to the empty string. If not set, this will become
    `unnamed-php-service` in the Datadog UI.
+ - `DD_VERSION`: defaults to the empty string.
  - `DD_AGENT_HOST`: defaults to `localhost`.
  - `DD_TRACE_AGENT_PORT`: defaults to `8126`.
  - `DD_TRACE_AGENT_URL`: defaults to the empty string. If set, this will
-   override `DD_AGENT_HOST` and `DD_TRACE_AGENT_POR`.
+   override `DD_AGENT_HOST` and `DD_TRACE_AGENT_PORT`.
 
 ### Building From Source
 
