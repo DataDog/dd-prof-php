@@ -3,6 +3,13 @@
 The Datadog PHP profiler is a Zend Extension for PHP 7.1+. Debug and ZTS builds
 are not currently supported.
 
+Supported platforms (all x86-64):
+ - CentOS 7+ GNU/Linux. This works for most glibc based Linux versions that have
+   glibc 2.17 or newer.
+ - Alpine 3.13+ with musl.
+
+Additionally, it has been developed and tested on MacOS Big Sur (11.6).
+
 The plan for this code is to be eventually merged into
 [Datadog/dd-trace-php](https://github.com/DataDog/dd-trace-php).
 
