@@ -1,0 +1,4 @@
+say-hello:
+  tags: ["runner:main"]
+  stage: test
+  script: echo 'Hello, world.'
