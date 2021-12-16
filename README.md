@@ -11,6 +11,29 @@ The plan for this code is to be eventually merged into
 Users should install via the Tracer's installations script.
 TODO: add more details about this.
 
+The agent needs to be at least v7.20 or v6.20.
+
+## Configuring
+
+The profiler uses these environment variables. If the tracer is already set up,
+then you may not need to adjust any of them:
+
+ - `DD_PROFILING_ENABLED`: defaults to `on` except for the CLI SAPI, which
+   defaults to `off`.
+ - `DD_PROFILING_LOG_LEVEL`: defaults to `off`. Acceptable values are `off`,
+   `error`, `warn`, `info`, and `debug`. Log message are printed to stderr, not
+   to the PHP `error_log`.
+ - `DD_PROFILING_EXPERIMENTAL_CPU_TIME_ENABLED`: defaults to `off`, as it is
+   experimental. It has low overhead, but is biased towards functions that do
+   I/O (not desriable, but perhaps still useful).
+ - `DD_ENV`: defaults to the empty string.
+ - `DD_SERVICE`: defaults to the empty string. If not set, this will become
+   `unnamed-php-service` in the Datadog UI.
+ - `DD_AGENT_HOST`: defaults to `localhost`.
+ - `DD_TRACE_AGENT_PORT`: defaults to `8126`.
+ - `DD_TRACE_AGENT_URL`: defaults to the empty string. If set, this will
+   override `DD_AGENT_HOST` and `DD_TRACE_AGENT_POR`.
+
 ### Building From Source
 
 For people who really want to build from source, like other Datadog Engineers,
