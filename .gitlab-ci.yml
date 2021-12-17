@@ -7,9 +7,9 @@ variables:
 
 trigger_internal_build:
   variables:
-    LIBDDPROF_COMMIT_BRANCH: $CI_COMMIT_BRANCH
-    LIBDDPROF_COMMIT_SHA: $CI_COMMIT_SHA
-    LIBDDPROF_SHORT_COMMIT_SHA: ${CI_COMMIT_SHORT_SHA}
+    DD_PROF_PHP_COMMIT_BRANCH: $CI_COMMIT_BRANCH
+    DD_PROF_PHP_COMMIT_SHA: $CI_COMMIT_SHA
+    DD_PROF_PHP_SHORT_COMMIT_SHA: ${CI_COMMIT_SHORT_SHA}
   trigger:
     project: DataDog/dd-prof-php-build
     strategy: depend
