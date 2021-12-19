@@ -52,6 +52,8 @@ static bool detect_profiling_enabled(const char *value, sapi_t sapi) {
   string_view_t enabled = datadog_php_string_view_from_cstr(value);
   if (datadog_php_string_view_is_boolean_true(enabled))
     return true;
+
+  // todo: when merging with the tracer, default all SAPIs to off, not just CLI
   return sapi == DATADOG_PHP_SAPI_CLI ? false : enabled.len == 0;
 }
 
@@ -61,6 +63,12 @@ static void diagnose_profiling_enabled(bool enabled) {
   if (enabled) {
     string = "[Datadog Profiling] Profiling is enabled.";
   } else {
+    /* This message might not be logged. I've see-sawed back-and-forth on
+     * whether *_ENABLED=off + *_LOG_LEVEL=info should actually do anything. On
+     * one hand, the profiler is off and shouldn't do anything. On the other,
+     * if the log level is set to something, reminding people that it's set to
+     * off may be useful.
+     */
     string = "[Datadog Profiling] Profiling is disabled.";
   }
 

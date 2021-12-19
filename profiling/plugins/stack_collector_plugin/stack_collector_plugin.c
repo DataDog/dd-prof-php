@@ -29,6 +29,10 @@ ZEND_TLS int64_t zend_thread_id;
 static _Atomic bool enabled;
 
 void datadog_php_stack_collector_first_activate(bool profiling_enabled) {
+  enabled = profiling_enabled;
+  if (!profiling_enabled)
+    return;
+
   zend_thread_id = (int64_t)uv_thread_self();
 
   if (datadog_php_profiling_cpu_time_enabled) {
@@ -45,8 +49,6 @@ void datadog_php_stack_collector_first_activate(bool profiling_enabled) {
       return;
     }
   }
-
-  enabled = profiling_enabled;
 }
 
 /* By default, no interrupt function is set. Other extensions may set one, and
