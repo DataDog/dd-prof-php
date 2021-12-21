@@ -4,7 +4,7 @@
  ]]
 cmake_minimum_required(VERSION 3.19)
 
-project(datadog-php-workspace
+project(datadog-php-profiling
   LANGUAGES C CXX
 )
 
