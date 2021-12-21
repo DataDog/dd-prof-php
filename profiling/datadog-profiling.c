@@ -37,24 +37,16 @@ void datadog_profiling_diagnostics(void) {
 ZEND_TLS bool datadog_profiling_enabled;
 
 /**
- * Detect whether the profiler should be enabled.
- * The profiler should be enabled for the CLI SAPI if `value` is a string value
- * for true.
- * The profiler should be enabled for other SAPIs unless `value` is a non-empty
- * string which isn't true.
+ * Detect whether the profiler should be enabled; it defaults to off.
  * See datadog_php_string_view_is_boolean_true to know which strings are
  * considered to be true.
  * @param value A boolean string value. May be NULL.
  * @param sapi
  * @return
  */
-static bool detect_profiling_enabled(const char *value, sapi_t sapi) {
+static bool detect_profiling_enabled(const char *value) {
   string_view_t enabled = datadog_php_string_view_from_cstr(value);
-  if (datadog_php_string_view_is_boolean_true(enabled))
-    return true;
-
-  // todo: when merging with the tracer, default all SAPIs to off, not just CLI
-  return sapi == DATADOG_PHP_SAPI_CLI ? false : enabled.len == 0;
+  return datadog_php_string_view_is_boolean_true(enabled);
 }
 
 static void diagnose_profiling_enabled(bool enabled) {
@@ -123,9 +115,6 @@ int datadog_profiling_startup(zend_extension *extension) {
 #endif
 
 static void datadog_profiling_first_activate(void) {
-  sapi_t sapi = datadog_php_sapi_detect(
-      datadog_php_string_view_from_cstr(sapi_module.name));
-
   /* sapi_getenv may or may not include process environment variables.
    * It will return NULL when it is not found in the possibly synthetic SAPI
    * environment. Hence, we need to do a getenv() in any case.
@@ -141,7 +130,7 @@ static void datadog_profiling_first_activate(void) {
     value = getenv(env_var.ptr);
   }
 
-  datadog_profiling_enabled = detect_profiling_enabled(value, sapi);
+  datadog_profiling_enabled = detect_profiling_enabled(value);
 
   if (use_sapi_env) {
     efree(value);
@@ -151,6 +140,9 @@ static void datadog_profiling_first_activate(void) {
 
   // Logging plugin must be initialized before diagnosing things
   diagnose_profiling_enabled(datadog_profiling_enabled);
+
+  sapi_t sapi = datadog_php_sapi_detect(
+      datadog_php_string_view_from_cstr(sapi_module.name));
   sapi_diagnose(sapi,
                 datadog_php_string_view_from_cstr(sapi_module.pretty_name));
 
