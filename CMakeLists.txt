@@ -99,6 +99,16 @@ target_link_libraries(datadog-profiling
     PkgConfig::UV
     PhpConfig::PhpConfig
     Threads::Threads
+  PUBLIC
+    #[[
+      Note that this is actually important! Without it, on Alpine it will
+      sometimes link libc in statically, and then we hide the symbols with a
+      linker script, and then __vdsosym will fail to find symbols in libc like
+      like clock_gettime! This means the libc's symbols that get called by VDSO
+      need to be public, and publishing libc's symbols as part of Datadog's
+      libraries would be setting us up for symbol conflict failures.
+    ]]
+    -lc
 )
 
 if(CMAKE_SYSTEM_NAME MATCHES "Linux")
