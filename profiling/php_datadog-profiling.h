@@ -5,7 +5,7 @@
 
 #include <Zend/zend_extensions.h>
 
-#define PHP_DATADOG_PROFILING_VERSION "0.3.0-rc.4"
+#define PHP_DATADOG_PROFILING_VERSION "0.3.0-rc.6"
 
 int datadog_profiling_startup(zend_extension *);
 void datadog_profiling_activate(void);
