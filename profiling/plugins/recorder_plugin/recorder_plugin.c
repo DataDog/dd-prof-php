@@ -559,12 +559,12 @@ static bool recorder_first_activate_helper() {
   }
 
   // todo: DD_SITE + DD_API_KEY
-  const char *path = "/profiling/v1/input";
   datadog_php_arena *arena = globals.arena;
 
   // prioritize URL over HOST + PORT
   string url = datadog_php_profiler_getenv(SV("DD_TRACE_AGENT_URL"), arena);
   if (!url.len || !url.data[0]) {
+    const char *path = "/profiling/v1/input";
 
     string env_host = datadog_php_profiler_getenv(SV("DD_AGENT_HOST"), arena);
     const char *host =

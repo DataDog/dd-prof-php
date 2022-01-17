@@ -8,6 +8,9 @@ project(datadog-php-profiling
   LANGUAGES C CXX
 )
 
+# Verbose build commands
+set(CMAKE_VERBOSE_MAKEFILE on)
+
 # Add cmake/Modules to CMAKE_MODULE_PATH so find_package(PhpConfig) will work
 list(PREPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules")
 
@@ -135,3 +138,6 @@ target_include_directories(datadog-profiling
   PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
   PRIVATE $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/components>
 )
+
+# Cpp check static analysis
+include(CppCheck)
