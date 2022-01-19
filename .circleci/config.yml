@@ -73,14 +73,11 @@ jobs:
             # It should NOT have non-zero exit code.
             DD_PROFILING_ENABLED=yes php --ri datadog-profiling
 
-  phpt:
-    docker:
-      - image: cimg/base:2022.01
-    steps:
-      - checkout
       - run:
           name: Run .phpt tests
           command: |
+            # Honestly, these should be a separate "job" but didn't want to
+            # duplicate installing packages and such.
             set -euo pipefail
             extension_dir="$(php-config --extension-dir)"
             cp -v "$extension_dir/build/run-tests.php" .
