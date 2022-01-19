@@ -13,37 +13,63 @@ jobs:
             pwd
             ls -lh .
 
-#      - run:
-#          name: Add OS packages
-#          command: |
-#            set -euo pipefail
-#            user=$(whoami)
-#            sudo apt-get update
-#            sudo apt-get install -y php7.4-dev libuv1-dev
-#
-#      - run:
-#          name: Add /opt packages
-#          command: |
-#            curl -OL https://github.com/DataDog/libddprof/releases/download/v0.2.0/libddprof-x86_64-unknown-linux-gnu.tar.gz
-#            sha256sum="cba0f24074d44781d7252b912faff50d330957e84a8f40a172a8138e81001f27"
-#            echo "$sha256sum  libddprof-x86_64-unknown-linux-gnu.tar.gz" | sha256sum -c
-#            export DDProf_ROOT="/opt/libddprof"
-#            sudo mkdir -p "$DDProf_ROOT"
-#            sudo chown "$user" "$DDProf_ROOT"
-#            tar -x --strip-components 1 \
-#              -f libddprof-x86_64-unknown-linux-gnu.tar.gz \
-#              -C "$DDProf_ROOT"
-#            curl -OL https://github.com/Kitware/CMake/releases/download/v3.22.1/cmake-3.22.1-linux-x86_64.tar.gz
-#            sha256sum="73565c72355c6652e9db149249af36bcab44d9d478c5546fd926e69ad6b43640"
-#            echo "$sha256sum  cmake-3.22.1-linux-x86_64.tar.gz"
-#            sudo mkdir -p /opt/cmake
-#            sudo chown $user /opt/cmake
-#            tar -x --strip-components 1 \
-#              -f cmake-3.22.1-linux-x86_64.tar.gz \
-#              -C /opt/cmake
-#            PATH="/opt/cmake/bin:$PATH"
-#
-#      - run:
-#          name: Build PHP profiling
-#          command: |
-#            pwd #where does checkout go?
+      - run:
+          name: Add OS packages
+          command: |
+            set -euo pipefail
+            sudo apt-get update
+            sudo apt-get install -y php7.4-dev libuv1-dev
+
+      - run:
+          name: Add /opt packages
+          command: |
+            set -euo pipefail
+            user=$(whoami)
+            curl -OL https://github.com/DataDog/libddprof/releases/download/v0.2.0/libddprof-x86_64-unknown-linux-gnu.tar.gz
+            sha256sum="cba0f24074d44781d7252b912faff50d330957e84a8f40a172a8138e81001f27"
+            echo "$sha256sum  libddprof-x86_64-unknown-linux-gnu.tar.gz" | sha256sum -c
+            export DDProf_ROOT="/opt/libddprof"
+            sudo mkdir -p "$DDProf_ROOT"
+            sudo chown "$user" "$DDProf_ROOT"
+            tar -x --strip-components 1 \
+              -f libddprof-x86_64-unknown-linux-gnu.tar.gz \
+              -C "$DDProf_ROOT"
+            curl -OL https://github.com/Kitware/CMake/releases/download/v3.22.1/cmake-3.22.1-linux-x86_64.tar.gz
+            sha256sum="73565c72355c6652e9db149249af36bcab44d9d478c5546fd926e69ad6b43640"
+            echo "$sha256sum  cmake-3.22.1-linux-x86_64.tar.gz"
+            sudo mkdir -p /opt/cmake
+            sudo chown $user /opt/cmake
+            tar -x --strip-components 1 \
+              -f cmake-3.22.1-linux-x86_64.tar.gz \
+              -C /opt/cmake
+
+      - run:
+          name: Build datadog-profiling
+          command: |
+            set -euo pipefail
+            export DDProf_ROOT="/opt/libddprof"
+            export PATH="/opt/cmake/bin:$PATH"
+            cmake -S . -B cmake-build-release -DCMAKE_BUILD_TYPE=Release
+            cmake --build cmake-build-release
+
+      - run:
+          name: Install datadog-profiling
+          command: |
+            set -euo pipefail
+            extension_dir="$(php-config --extension-dir)"
+            sudo mkdir -vp "$extension_dir"
+            sudo cp -v cmake-build-release/datadog-profiling.so "$extension_dir"
+            ini_dir="$(php-config --ini-dir)"
+            sudo mkdir -vp "$ini_dir"
+            echo "zend_extension=datadog-profiling.so" > datadog-profiling.ini
+            sudo cp -v datadog-profiling.ini "$ini_dir/"
+
+      - run:
+          name: Run php --ri diagnostics
+          command: |
+            # This should "fail" with a success error code with a message
+            # containing something like:
+            # [Datadog Profiling] Failed to upload profile
+            # It should NOT have non-zero exit code.
+            DD_PROFILING_ENABLED=yes php --ri datadog-profiling
+
