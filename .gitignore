@@ -1,1 +1,2 @@
 .docker-sync.yml
+build/*
