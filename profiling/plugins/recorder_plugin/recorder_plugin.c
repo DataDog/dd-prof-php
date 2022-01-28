@@ -4,7 +4,6 @@
 #include <php_datadog-profiling.h>
 #include <plugins/log_plugin/log_plugin.h>
 
-#include <SAPI.h>
 #include <components/arena/arena.h>
 #include <components/channel/channel.h>
 #include <components/string_view/string_view.h>
@@ -23,64 +22,12 @@
 ddprof_ffi_ByteSlice to_byteslice(const char *str) {
   return (ddprof_ffi_ByteSlice){(const uint8_t *)str, strlen(str)};
 }
-
-typedef struct string_s {
-  uint32_t len;
-  char *data;
-} string;
-
-ddprof_ffi_ByteSlice string_to_byteslice(struct string_s str) {
-  uint8_t *ptr = (uint8_t *)str.data;
-  return (ddprof_ffi_ByteSlice){.ptr = ptr, .len = str.len};
+ddprof_ffi_ByteSlice sv_to_byteslice(datadog_php_string_view view) {
+  return (ddprof_ffi_ByteSlice){(const uint8_t *)view.ptr, view.len};
 }
-
-struct {
-  /**
-   * We need to make copies of the environment variables because they can be
-   * invalidated by the environment. We store all of these strings in the arena.
-   */
-  unsigned char strings[4096];
-  datadog_php_arena *arena;
-
-  string agent_url;
-  string env;
-  string service;
-  string version;
-  string cpu_time_enabled;
-} globals;
 
 atomic_bool datadog_php_profiling_recorder_enabled = false;
 bool datadog_php_profiling_cpu_time_enabled = false;
-
-static string arena_string_alloc(datadog_php_arena *arena, const uint32_t len) {
-  /* We ensure that every string is padded at the end by null bytes to align it
-   * to max_align_t, ensuring there is at least 1 null byte. This is would
-   * likely happen anyway if another object of the same or larger alignment is
-   * allocated next, but we guarantee it because it is useful.
-   */
-  uint32_t align = _Alignof(max_align_t);
-  uintptr_t len_with_one_null_byte = len + 1;
-  uint32_t diff = datadog_php_arena_align_diff(len_with_one_null_byte, align);
-  uint32_t allocation_size = len_with_one_null_byte + diff;
-
-  char *data = (char *)datadog_php_arena_alloc(arena, allocation_size, align);
-  if (data) {
-    // zero trailing bytes
-    memset(data + len, 0, allocation_size - len);
-    return (string){.len = allocation_size, .data = data};
-  }
-  return (string){0, ""};
-}
-
-static string arena_string_new(datadog_php_arena *arena, uint32_t len,
-                               const char *source) {
-  string dest = arena_string_alloc(arena, len);
-  if (dest.len) {
-    memcpy(dest.data, source, len);
-    dest.len = len;
-  }
-  return dest;
-}
 
 /* thread_id will point to thread_id_v if the thread is created successfully;
  * null otherwise.
@@ -453,8 +400,6 @@ void datadog_php_recorder_plugin_shutdown(zend_extension *extension) {
   if (!datadog_php_profiling_recorder_enabled)
     return;
 
-  datadog_php_arena_delete(globals.arena);
-
   // Disable the plugin before sending as that flag's checked by the receiver.
   datadog_php_profiling_recorder_enabled = false;
 
@@ -477,161 +422,26 @@ void datadog_php_recorder_plugin_shutdown(zend_extension *extension) {
   ddprof_ffi_ProfileExporterV3_delete(exporter);
 }
 
-// todo: extract this to sensible location (not recorder)
-// Adapted from zai_env from Tracer project {{{
-#if PHP_VERSION_ID >= 80000
-#define sapi_getenv_compat(name, name_len) sapi_getenv((name), name_len)
-#elif PHP_VERSION_ID >= 70000
-#define sapi_getenv_compat(name, name_len) sapi_getenv((char *)(name), name_len)
-#else
-#define sapi_getenv_compat(name, name_len)                                     \
-  sapi_getenv((char *)(name), name_len TSRMLS_CC)
-#endif
-
-/**
- * Only call during .first_activate.
- */
-static string datadog_php_profiler_getenv(datadog_php_string_view name,
-                                          datadog_php_arena *arena) {
-  if (!name.len || !name.ptr || !arena)
-    return (string){.len = 0, .data = ""};
-
-  /* Some SAPIs do not initialize the SAPI-controlled environment variables
-   * until SAPI RINIT. It is for this reason we cannot reliably access
-   * environment variables until module RINIT.
-   */
-  if (!PG(modules_activated) && !PG(during_request_startup))
-    return (string){.len = 0, .data = ""};
-
-  /* sapi_getenv may or may not include process environment variables.
-   * It will return NULL when it is not found in the possibly synthetic SAPI
-   * environment. Hence, we need to do a getenv() in any case.
-   */
-  bool use_sapi_env = false;
-
-  char *value = sapi_getenv_compat(name.ptr, name.len);
-  if (value) {
-    use_sapi_env = true;
-  } else {
-    value = getenv(name.ptr);
-  }
-
-  if (!value)
-    return (string){.len = 0, .data = ""};
-
-  size_t value_len = strlen(value);
-
-  string result = arena_string_new(arena, value_len, value);
-
-  if (use_sapi_env)
-    efree(value);
-
-  return result;
-}
-// }}}
-
 #define SV(literal)                                                            \
   (datadog_php_string_view) { sizeof(literal) - 1, literal }
 
-static string datadog_php_profiler_getenv_or(datadog_php_string_view name,
-                                             datadog_php_arena *arena,
-                                             datadog_php_string_view default_) {
-  string env_var = datadog_php_profiler_getenv(name, arena);
-  if (!env_var.len || !env_var.data[0]) {
-    // the env_var doesn't have any data -- use the default instead
-    return arena_string_new(arena, default_.len, default_.ptr);
-  }
-  return env_var;
-}
-
-static bool recorder_first_activate_helper() {
-  globals.arena =
-      datadog_php_arena_new(sizeof globals.strings, globals.strings);
-  bool success = globals.arena != NULL;
-
-  if (success) {
-    success = datadog_php_channel_ctor(&channel, CHANNEL_CAPACITY);
-  }
-
+static bool
+recorder_first_activate_helper(const datadog_php_profiling_config *config) {
+  bool success = datadog_php_channel_ctor(&channel, CHANNEL_CAPACITY);
   if (!success) {
-    datadog_php_arena_delete(globals.arena);
     return false;
   }
 
-  // todo: DD_SITE + DD_API_KEY
-  const char *path = "/profiling/v1/input";
-  datadog_php_arena *arena = globals.arena;
-
-  // prioritize URL over HOST + PORT
-  string url = datadog_php_profiler_getenv(SV("DD_TRACE_AGENT_URL"), arena);
-  if (!url.len || !url.data[0]) {
-
-    string env_host = datadog_php_profiler_getenv(SV("DD_AGENT_HOST"), arena);
-    const char *host =
-        env_host.len && env_host.data[0] ? env_host.data : "localhost";
-
-    string env_port =
-        datadog_php_profiler_getenv(SV("DD_TRACE_AGENT_PORT"), arena);
-    const char *port =
-        env_port.len && env_port.data[0] ? env_port.data : "8126";
-
-    // todo: can I log here?
-    int size = snprintf(NULL, 0, "http://%s:%s%s", host, port, path);
-    if (size <= 0)
-      return false;
-
-    string buffer = arena_string_alloc(arena, size);
-    if (!buffer.len) {
-      const char *msg =
-          "[Datadog Profiling] Failed to start; could not create memory arena for configuration settings.";
-      prof_logger.log_cstr(DATADOG_PHP_LOG_ERROR, msg);
-      return false;
-    }
-
-    int result =
-        snprintf(buffer.data, buffer.len, "http://%s:%s%s", host, port, path);
-    if (result < size) {
-      // todo: log failure
-      return false;
-    }
-
-    globals.agent_url = buffer;
-  } else {
-    globals.agent_url = url;
-  }
-
-  // empty string is permitted for service
-  datadog_php_string_view empty = {0, ""};
-  globals.service =
-      datadog_php_profiler_getenv_or(SV("DD_SERVICE"), arena, empty);
-
-  // empty string is permitted for service
-  globals.version =
-      datadog_php_profiler_getenv_or(SV("DD_VERSION"), arena, empty);
-
-  // empty string is permitted for env
-  globals.env = datadog_php_profiler_getenv_or(SV("DD_ENV"), arena, empty);
-
-  // experimental: enable cpu-time profile
-  datadog_php_string_view no = {2, "no"};
-  globals.cpu_time_enabled = datadog_php_profiler_getenv_or(
-      SV("DD_PROFILING_EXPERIMENTAL_CPU_TIME_ENABLED"), arena, no);
-
   datadog_php_profiling_cpu_time_enabled =
-      datadog_php_string_view_is_boolean_true(
-          (datadog_php_string_view){.len = globals.cpu_time_enabled.len,
-                                    .ptr = globals.cpu_time_enabled.data});
-
-  ddprof_ffi_ByteSlice base_url = string_to_byteslice(globals.agent_url);
-  ddprof_ffi_EndpointV3 endpoint = ddprof_ffi_EndpointV3_agent(base_url);
+      config->profiling_experimental_cpu_enabled;
 
   ddprof_ffi_Tag tags_[] = {
       {.name = to_byteslice("language"), .value = to_byteslice("php")},
       {.name = to_byteslice("service"),
-       .value = string_to_byteslice(globals.service)},
-      {.name = to_byteslice("env"), .value = string_to_byteslice(globals.env)},
+       .value = sv_to_byteslice(config->service)},
+      {.name = to_byteslice("env"), .value = sv_to_byteslice(config->env)},
       {.name = to_byteslice("version"),
-       .value = string_to_byteslice(globals.version)},
+       .value = sv_to_byteslice(config->version)},
       {.name = to_byteslice("profiler_version"),
        .value = to_byteslice(PHP_DATADOG_PROFILING_VERSION)},
   };
@@ -640,7 +450,8 @@ static bool recorder_first_activate_helper() {
                                .len = sizeof tags_ / sizeof *tags_};
 
   struct ddprof_ffi_NewProfileExporterV3Result exporter_result =
-      ddprof_ffi_ProfileExporterV3_new(to_byteslice("php"), tags, endpoint);
+      ddprof_ffi_ProfileExporterV3_new(to_byteslice("php"), tags,
+                                       config->endpoint);
   if (exporter_result.tag == DDPROF_FFI_NEW_PROFILE_EXPORTER_V3_RESULT_ERR) {
     const char *str =
         "[Datadog Profiling] Failed to start; could not create HTTP uploader: ";
@@ -674,20 +485,15 @@ static bool recorder_first_activate_helper() {
   return true;
 }
 
-void datadog_php_recorder_plugin_first_activate(bool profiling_enabled) {
+void datadog_php_recorder_plugin_first_activate(
+    const datadog_php_profiling_config *config) {
   datadog_php_profiling_recorder_enabled =
-      profiling_enabled && recorder_first_activate_helper();
+      config->profiling_enabled && recorder_first_activate_helper(config);
 }
-
-#if __cplusplus
-#define C_STATIC(...)
-#else
-#define C_STATIC(...) static __VA_ARGS__
-#endif
 
 static int64_t
 upload_logv(datadog_php_log_level level, size_t n_messages,
-            datadog_php_string_view messages[C_STATIC(n_messages)]) {
+            datadog_php_string_view messages[static n_messages]) {
 
   const char *key;
   switch (level) {
@@ -729,7 +535,7 @@ upload_logv(datadog_php_log_level level, size_t n_messages,
   }
 
   datadog_profiling_info_diagnostics_row(
-      key, message ? message : "(error formatting messages)\n");
+      key, message ? message : "(error formatting messages)");
 
   free(message);
 
@@ -745,10 +551,9 @@ static void upload_log_cstr(datadog_php_log_level level, const char *cstr) {
   upload_log(level, datadog_php_string_view_from_cstr(cstr));
 }
 
-#undef C_STATIC
-
-void datadog_php_recorder_plugin_diagnose(void) {
-  const char *yes = "yes", *no = "no";
+void datadog_php_recorder_plugin_diagnose(
+    const datadog_php_profiling_config *config) {
+  const char *yes = "true", *no = "false";
 
   php_info_print_table_colspan_header(2, "Profiling Recorder Diagnostics");
 

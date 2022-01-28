@@ -28,14 +28,15 @@ static struct globals_s globals;
 ZEND_TLS int64_t zend_thread_id;
 static _Atomic bool enabled;
 
-void datadog_php_stack_collector_first_activate(bool profiling_enabled) {
-  enabled = profiling_enabled;
-  if (!profiling_enabled)
+void datadog_php_stack_collector_first_activate(
+    datadog_php_profiling_config *config) {
+  enabled = config->profiling_enabled;
+  if (!config->profiling_enabled)
     return;
 
   zend_thread_id = (int64_t)uv_thread_self();
 
-  if (datadog_php_profiling_cpu_time_enabled) {
+  if (config->profiling_experimental_cpu_enabled) {
     datadog_php_cpu_time_result now = datadog_php_cpu_time_now();
     if (now.tag == DATADOG_PHP_CPU_TIME_ERR) {
       datadog_php_string_view messages[] = {

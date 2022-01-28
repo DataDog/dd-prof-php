@@ -9,11 +9,14 @@
 #include <uv.h>
 
 // must come after php.h
+#include <ext/standard/html.h>
 #include <ext/standard/info.h>
 
 #include "components/log/log.h"
 #include "components/sapi/sapi.h"
 #include "components/string_view/string_view.h"
+#include "config/config.h"
+#include "env/env.h"
 #include "plugins/log_plugin/log_plugin.h"
 #include "plugins/recorder_plugin/recorder_plugin.h"
 #include "plugins/stack_collector_plugin/stack_collector_plugin.h"
@@ -24,30 +27,93 @@ typedef datadog_php_sapi sapi_t;
 typedef datadog_php_string_view string_view_t;
 
 static uv_once_t first_activate_once = UV_ONCE_INIT;
+static uint8_t profiling_env_storage[4096];
+static datadog_php_profiling_env profiling_env;
+static datadog_php_profiling_config profiling_config;
+
+static const char *datadog_php_log_level_to_str(datadog_php_log_level level) {
+  switch (level) {
+  default:
+  case DATADOG_PHP_LOG_UNKNOWN:
+    return "unknown";
+  case DATADOG_PHP_LOG_OFF:
+    return "off";
+  case DATADOG_PHP_LOG_ERROR:
+    return "error";
+  case DATADOG_PHP_LOG_WARN:
+    return "warn";
+  case DATADOG_PHP_LOG_INFO:
+    return "info";
+  case DATADOG_PHP_LOG_DEBUG:
+    return "debug";
+  }
+}
+
+static void datadog_info_print_esc_view(datadog_php_string_view str);
+static void datadog_info_print_esc(const char *str);
+static void datadog_info_print(const char *);
+
+static void diagnose_endpoint(ddprof_ffi_EndpointV3 endpoint) {
+  const char *col_a = "Profiling Agent Endpoint";
+  if (endpoint.tag != DDPROF_FFI_ENDPOINT_V3_AGENT) {
+    // todo: print agentless endpoint info
+    datadog_profiling_info_diagnostics_row(col_a, "(agentless)");
+    return;
+  }
+
+  string_view_t url = {
+      .len = endpoint.agent.len,
+      .ptr = (const char *)endpoint.agent.ptr,
+  };
+
+  if (sapi_module.phpinfo_as_text) {
+    // Ensure it's null terminated for this API.
+    zend_string *col_b = zend_string_init(url.ptr, url.len, 0);
+    php_info_print_table_row(2, col_a, col_b->val);
+    zend_string_release(col_b);
+    return;
+  }
+  datadog_info_print("<tr><td class='e'>");
+  datadog_info_print_esc(col_a);
+  datadog_info_print("</td><td class='v'>");
+  datadog_info_print_esc_view(url);
+  datadog_info_print("</td></tr>\n");
+}
+
+static void
+datadog_php_config_diagnose(const datadog_php_profiling_config *config) {
+  const char *yes = "true", *no = "false";
+  php_info_print_table_colspan_header(2, "Profiling Inferred Configuration");
+  datadog_profiling_info_diagnostics_row("Profiling Enabled",
+                                         config->profiling_enabled ? yes : no);
+  datadog_profiling_info_diagnostics_row(
+      "Experimental CPU Profiling Enabled",
+      config->profiling_experimental_cpu_enabled ? yes : no);
+
+  datadog_profiling_info_diagnostics_row(
+      "Profiling Log Level",
+      datadog_php_log_level_to_str(config->profiling_log_level));
+  diagnose_endpoint(config->endpoint);
+
+  datadog_profiling_info_diagnostics_row("Application's Environment (DD_ENV)",
+                                         config->env.ptr);
+  datadog_profiling_info_diagnostics_row("Application's Service (DD_SERVICE)",
+                                         config->service.ptr);
+  datadog_profiling_info_diagnostics_row("Application's Version (DD_VERSION)",
+                                         config->version.ptr);
+}
 
 /**
  * Diagnose issues such as being unable to reach the agent.
  */
 void datadog_profiling_diagnostics(void) {
   php_info_print_table_start();
-  datadog_php_recorder_plugin_diagnose();
+  datadog_php_config_diagnose(&profiling_config);
+  datadog_php_recorder_plugin_diagnose(&profiling_config);
   php_info_print_table_end();
 }
 
 ZEND_TLS bool datadog_profiling_enabled;
-
-/**
- * Detect whether the profiler should be enabled; it defaults to off.
- * See datadog_php_string_view_is_boolean_true to know which strings are
- * considered to be true.
- * @param value A boolean string value. May be NULL.
- * @param sapi
- * @return
- */
-static bool detect_profiling_enabled(const char *value) {
-  string_view_t enabled = datadog_php_string_view_from_cstr(value);
-  return datadog_php_string_view_is_boolean_true(enabled);
-}
 
 static void diagnose_profiling_enabled(bool enabled) {
   const char *string = NULL;
@@ -107,36 +173,21 @@ int datadog_profiling_startup(zend_extension *extension) {
   return SUCCESS;
 }
 
-// todo: extract this common code out of log_plugin, recorder, etc
-#if PHP_VERSION_ID >= 80000
-#define sapi_getenv_compat(name, name_len) sapi_getenv((name), name_len)
-#elif PHP_VERSION_ID >= 70000
-#define sapi_getenv_compat(name, name_len) sapi_getenv((char *)(name), name_len)
-#endif
-
 static void datadog_profiling_first_activate(void) {
-  /* sapi_getenv may or may not include process environment variables.
-   * It will return NULL when it is not found in the possibly synthetic SAPI
-   * environment. Hence, we need to do a getenv() in any case.
-   */
-  bool use_sapi_env = false;
-
-  datadog_php_string_view env_var =
-      datadog_php_string_view_from_cstr("DD_PROFILING_ENABLED");
-  char *value = sapi_getenv_compat(env_var.ptr, env_var.len);
-  if (value) {
-    use_sapi_env = true;
+  datadog_php_profiling_config_default_ctor(&profiling_config);
+  datadog_php_arena *arena = datadog_php_arena_new(sizeof profiling_env_storage,
+                                                   profiling_env_storage);
+  if (arena &&
+      datadog_php_profiling_getenvs(&profiling_env, &sapi_module, arena)) {
+    datadog_php_profiling_config_ctor(&profiling_config, arena, &profiling_env);
   } else {
-    value = getenv(env_var.ptr);
+    fprintf(stderr, "Nani!?\n");
+    exit(1);
   }
 
-  datadog_profiling_enabled = detect_profiling_enabled(value);
+  datadog_profiling_enabled = profiling_config.profiling_enabled;
 
-  if (use_sapi_env) {
-    efree(value);
-  }
-
-  datadog_php_log_plugin_first_activate(datadog_profiling_enabled);
+  datadog_php_log_plugin_first_activate(&profiling_config);
 
   // Logging plugin must be initialized before diagnosing things
   diagnose_profiling_enabled(datadog_profiling_enabled);
@@ -146,8 +197,8 @@ static void datadog_profiling_first_activate(void) {
   sapi_diagnose(sapi,
                 datadog_php_string_view_from_cstr(sapi_module.pretty_name));
 
-  datadog_php_recorder_plugin_first_activate(datadog_profiling_enabled);
-  datadog_php_stack_collector_first_activate(datadog_profiling_enabled);
+  datadog_php_recorder_plugin_first_activate(&profiling_config);
+  datadog_php_stack_collector_first_activate(&profiling_config);
 }
 
 void datadog_profiling_activate(void) {
@@ -165,21 +216,31 @@ void datadog_profiling_shutdown(zend_extension *extension) {
   datadog_php_log_plugin_shutdown(extension);
 }
 
+static void datadog_info_print_esc_view(datadog_php_string_view str) {
+  zend_string *zstr = php_escape_html_entities((const unsigned char *)str.ptr,
+                                               str.len, 0, ENT_QUOTES, "utf-8");
+  (void)php_output_write(ZSTR_VAL(zstr), ZSTR_LEN(zstr));
+  zend_string_release(zstr);
+}
+
+static void datadog_info_print_esc(const char *str) {
+  datadog_info_print_esc_view(datadog_php_string_view_from_cstr(str));
+}
+
 static void datadog_info_print(const char *str) {
-  php_output_write(str, strlen(str));
+  (void)php_output_write(str, strlen(str));
 }
 
 void datadog_profiling_info_diagnostics_row(const char *col_a,
                                             const char *col_b) {
-
   if (sapi_module.phpinfo_as_text) {
     php_info_print_table_row(2, col_a, col_b);
     return;
   }
   datadog_info_print("<tr><td class='e'>");
-  datadog_info_print(col_a);
+  datadog_info_print_esc(col_a);
   datadog_info_print("</td><td class='v'>");
-  datadog_info_print(col_b);
+  datadog_info_print_esc(col_b);
   datadog_info_print("</td></tr>\n");
 }
 

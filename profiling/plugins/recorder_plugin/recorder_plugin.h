@@ -2,6 +2,7 @@
 #define DATADOG_PHP_RECORDER_PLUGIN_H
 
 #include <Zend/zend_extensions.h>
+#include <config/config.h>
 #include <stack-collector/stack-collector.h>
 #include <stdatomic.h>
 #include <stdbool.h>
@@ -26,9 +27,11 @@ datadog_php_recorder_plugin_record(datadog_php_record_values record_values,
                                    int64_t tid,
                                    const datadog_php_stack_sample *sample);
 
-void datadog_php_recorder_plugin_first_activate(bool profiling_enabled);
+void datadog_php_recorder_plugin_first_activate(
+    const datadog_php_profiling_config *config);
 void datadog_php_recorder_plugin_shutdown(zend_extension *extension);
 
-void datadog_php_recorder_plugin_diagnose(void);
+void datadog_php_recorder_plugin_diagnose(
+    const datadog_php_profiling_config *config);
 
 #endif // DATADOG_PHP_RECORDER_PLUGIN_H

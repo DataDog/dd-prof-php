@@ -89,6 +89,8 @@ target_link_libraries(datadog-profiling
   PRIVATE
     datadog-php-arena
     datadog-php-channel
+    datadog-php-config
+    datadog-php-env
     datadog-php-log
     datadog_php_sapi
     datadog-php-stack-collector
