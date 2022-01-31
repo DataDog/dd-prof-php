@@ -122,8 +122,9 @@ startup_descriptor_cleanup:
   close(descriptor);
 }
 
-void datadog_php_log_plugin_first_activate(bool profiling_enabled) {
-  if (!profiling_enabled)
+void datadog_php_log_plugin_first_activate(
+    datadog_php_profiling_config *config) {
+  if (!config->profiling_enabled)
     return;
 
   datadog_php_log_plugin_init();
