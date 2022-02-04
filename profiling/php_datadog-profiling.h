@@ -13,6 +13,8 @@ void datadog_profiling_deactivate(void);
 void datadog_profiling_shutdown(zend_extension *);
 void datadog_profiling_diagnostics(void);
 
+ZEND_API void datadog_profiling_interrupt_function(struct _zend_execute_data *);
+
 #if defined(ZTS)
 ZEND_TSRMLS_CACHE_EXTERN()
 #endif
