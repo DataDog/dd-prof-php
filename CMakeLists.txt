@@ -59,7 +59,7 @@ if(DATADOG_PHP_TESTING)
 endif ()
 
 find_package(Threads REQUIRED)
-find_package(PhpConfig 7.1...8.1 REQUIRED)
+find_package(PhpConfig 7.1...<8.2 REQUIRED)
 find_package(PkgConfig REQUIRED)
 
 #[[ Prefer libuv-static, but note that it needs to be built with Position
@@ -89,6 +89,8 @@ target_link_libraries(datadog-profiling
   PRIVATE
     datadog-php-arena
     datadog-php-channel
+    datadog-php-config
+    datadog-php-env
     datadog-php-log
     datadog_php_sapi
     datadog-php-stack-collector

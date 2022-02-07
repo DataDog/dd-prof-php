@@ -4,6 +4,7 @@
 #include <Zend/zend_extensions.h>
 #include <components/log/log.h>
 #include <components/string_view/string_view.h>
+#include <config/config.h>
 #include <stdbool.h>
 #include <stdint.h>
 
@@ -13,7 +14,8 @@
 #define C_STATIC(...) static __VA_ARGS__
 #endif
 
-void datadog_php_log_plugin_first_activate(bool profiling_enabled);
+void datadog_php_log_plugin_first_activate(
+    datadog_php_profiling_config *config);
 void datadog_php_log_plugin_shutdown(zend_extension *extension);
 
 /* It's called a "static logger" because the logger isn't passed as a parameter,

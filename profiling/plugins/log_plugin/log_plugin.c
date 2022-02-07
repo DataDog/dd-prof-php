@@ -55,17 +55,7 @@ static int64_t datadog_php_log_plugin_logv(
   return datadog_php_logv(&profiler_logger, level, n_messages, messages);
 }
 
-// todo: extract this to a plugin?
-#if PHP_VERSION_ID >= 80000
-#define sapi_getenv_compat(name, name_len) sapi_getenv((name), name_len)
-#elif PHP_VERSION_ID >= 70000
-#define sapi_getenv_compat(name, name_len) sapi_getenv((char *)(name), name_len)
-#else
-#define sapi_getenv_compat(name, name_len)                                     \
-  sapi_getenv((char *)(name), name_len TSRMLS_CC)
-#endif
-
-static void datadog_php_log_plugin_init(void) {
+static void datadog_php_log_plugin_init(log_level_t log_level) {
   int descriptor = dup(STDERR_FILENO);
   if (descriptor < 1) {
     return;
@@ -82,25 +72,8 @@ static void datadog_php_log_plugin_init(void) {
     goto startup_descriptor_cleanup;
   }
 
-  string_view_t env_var =
-      datadog_php_string_view_from_cstr("DD_PROFILING_LOG_LEVEL");
-
-  char *env = sapi_getenv_compat(env_var.ptr, env_var.len);
-  bool uses_sapi_getenv = true;
-  if (!env) {
-    uses_sapi_getenv = false;
-    env = getenv("DD_PROFILING_LOG_LEVEL");
-  }
-
-  string_view_t env_val = datadog_php_string_view_from_cstr(env);
-  log_level_t log_level = datadog_php_log_level_detect(env_val);
-
   log_level_t corrected_log_level =
       log_level != DATADOG_PHP_LOG_UNKNOWN ? log_level : DATADOG_PHP_LOG_OFF;
-
-  if (uses_sapi_getenv) {
-    efree(env);
-  }
 
   if (!datadog_php_logger_ctor(&profiler_logger, descriptor,
                                corrected_log_level, &logger_mutex)) {
@@ -122,11 +95,12 @@ startup_descriptor_cleanup:
   close(descriptor);
 }
 
-void datadog_php_log_plugin_first_activate(bool profiling_enabled) {
-  if (!profiling_enabled)
+void datadog_php_log_plugin_first_activate(
+    datadog_php_profiling_config *config) {
+  if (!config->profiling_enabled)
     return;
 
-  datadog_php_log_plugin_init();
+  datadog_php_log_plugin_init(config->profiling_log_level);
 }
 
 void datadog_php_log_plugin_shutdown(zend_extension *extension) {

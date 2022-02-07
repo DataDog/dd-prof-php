@@ -15,24 +15,20 @@ The plan for this code is to be eventually merged into
 
 ## Installing
 
-Users should install via the Tracer's installations script.
-TODO: add more details about this.
-
-The agent needs to be at least v7.20 or v6.20.
+See [enabling the profiler](https://docs.datadoghq.com/tracing/profiler/enabling/php/).
 
 ## Configuring
 
 The profiler uses these environment variables. If the tracer is already set up,
 then you may not need to adjust any of them:
 
- - `DD_PROFILING_ENABLED`: defaults to `on` except for the CLI SAPI, which
-   defaults to `off`.
+ - `DD_PROFILING_ENABLED`: defaults to `false`.
  - `DD_PROFILING_LOG_LEVEL`: defaults to `off`. Acceptable values are `off`,
    `error`, `warn`, `info`, and `debug`. Log message are printed to stderr, not
    to the PHP `error_log`.
- - `DD_PROFILING_EXPERIMENTAL_CPU_TIME_ENABLED`: defaults to `off`, as it is
+ - `DD_PROFILING_EXPERIMENTAL_CPU_TIME_ENABLED`: defaults to `false`, as it is
    experimental. It has low overhead, but is biased towards functions that do
-   I/O (not desriable, but perhaps still useful).
+   I/O.
  - `DD_ENV`: defaults to the empty string.
  - `DD_SERVICE`: defaults to the empty string. If not set, this will become
    `unnamed-php-service` in the Datadog UI.
@@ -53,7 +49,7 @@ you will need:
  - pkg-config
  - PHP 7.1+
  - libuv (todo: min version?) and its headers
- - libddprof v0.2 for your platform. This is a Rust library, so I recommend
+ - libddprof v0.3 for your platform. This is a Rust library, so I recommend
    using the pre-built artifacts available at
    [Datadog/libddprof](https://github.com/DataDog/libddprof/releases) so you
    don't need a Rust toolchain.
