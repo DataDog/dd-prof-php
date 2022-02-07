@@ -55,16 +55,6 @@ static int64_t datadog_php_log_plugin_logv(
   return datadog_php_logv(&profiler_logger, level, n_messages, messages);
 }
 
-// todo: extract this to a plugin?
-#if PHP_VERSION_ID >= 80000
-#define sapi_getenv_compat(name, name_len) sapi_getenv((name), name_len)
-#elif PHP_VERSION_ID >= 70000
-#define sapi_getenv_compat(name, name_len) sapi_getenv((char *)(name), name_len)
-#else
-#define sapi_getenv_compat(name, name_len)                                     \
-  sapi_getenv((char *)(name), name_len TSRMLS_CC)
-#endif
-
 static void datadog_php_log_plugin_init(log_level_t log_level) {
   int descriptor = dup(STDERR_FILENO);
   if (descriptor < 1) {
