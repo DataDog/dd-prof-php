@@ -181,8 +181,16 @@ static void datadog_profiling_first_activate(void) {
       datadog_php_profiling_getenvs(&profiling_env, &sapi_module, arena)) {
     datadog_php_profiling_config_ctor(&profiling_config, arena, &profiling_env);
   } else {
-    fprintf(stderr, "Nani!?\n");
-    exit(1);
+    /* Env vars can't be inspected since the above branch failed. There's no
+     * way to know if the user wants logging. This is a pretty big failure,
+     * so print an error message anyway.
+     */
+    fprintf(
+        stderr,
+        "[Datadog Profiling] Unable to load configuration. Profiling is disabled.");
+
+    // This should already be false in this case, but let's be sure about it.
+    profiling_config.profiling_enabled = false;
   }
 
   datadog_profiling_enabled = profiling_config.profiling_enabled;
