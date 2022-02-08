@@ -354,6 +354,11 @@ static void datadog_php_stack_collector_interrupt_function(
                                      &thread_globals.sample);
 }
 
+ZEND_API void
+datadog_profiling_interrupt_function(zend_execute_data *execute_data) {
+  datadog_php_stack_collector_interrupt_function(execute_data);
+}
+
 static void datadog_php_stack_collector_interrupt_function_helper(
     zend_execute_data *execute_data) {
   datadog_php_stack_collector_interrupt_function(execute_data);

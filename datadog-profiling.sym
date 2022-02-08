@@ -2,6 +2,8 @@ DATADOG_PROFILER_0.1.0 {
 global:
         zend_extension_entry;
         extension_version_info;
+        datadog_profiling_interrupt_function;
+
 local:
         *;
 };
