@@ -137,3 +137,6 @@ target_include_directories(datadog-profiling
   PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
   PRIVATE $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/components>
 )
+
+# Cpp check static analysis
+include(CppCheck)
