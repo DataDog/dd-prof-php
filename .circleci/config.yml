@@ -83,7 +83,7 @@ jobs:
       - image: cimg/base:2022.02
     steps:
       - checkout
-      - run: bash nightly.sh /tmp
+      - run: bash .circleci/nightly.sh /tmp
       - store_artifacts:
           path: /tmp/datadog-profiling.tar.gz
           destination: datadog-profiling.tar.gz
