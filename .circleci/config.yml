@@ -4,14 +4,9 @@ jobs:
 
   build:
     docker:
-      - image: cimg/base:2022.01
+      - image: cimg/base:2022.02
     steps:
       - checkout
-      - run:
-          name: What does the directory layout look like?
-          command: |
-            pwd
-            ls -lh .
 
       - run:
           name: Add OS packages
@@ -82,3 +77,29 @@ jobs:
             extension_dir="$(php-config --extension-dir)"
             cp -v "$extension_dir/build/run-tests.php" .
             php run-tests.php tests/phpt
+
+  nightly:
+    docker:
+      - image: cimg/base:2022.02
+    steps:
+      - checkout
+      - run: bash .circleci/nightly.sh /tmp
+      - store_artifacts:
+          path: /tmp/datadog-profiling.tar.gz
+          destination: datadog-profiling.tar.gz
+
+workflows:
+  version: 2
+
+  commit:
+    when:
+      not:
+        equal: [ "nightly", << pipeline.schedule.name >> ]
+    jobs:
+      - build
+
+  nightly:
+    when:
+      equal: [ "nightly", << pipeline.schedule.name >> ]
+    jobs:
+      - nightly
