@@ -97,7 +97,6 @@ workflows:
         equal: [ "nightly", << pipeline.schedule.name >> ]
     jobs:
       - build
-      - nightly # todo: this is temporary
 
   nightly:
     when:
