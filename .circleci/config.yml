@@ -4,14 +4,9 @@ jobs:
 
   build:
     docker:
-      - image: cimg/base:2022.01
+      - image: cimg/base:2022.02
     steps:
       - checkout
-      - run:
-          name: What does the directory layout look like?
-          command: |
-            pwd
-            ls -lh .
 
       - run:
           name: Add OS packages
@@ -82,3 +77,9 @@ jobs:
             extension_dir="$(php-config --extension-dir)"
             cp -v "$extension_dir/build/run-tests.php" .
             php run-tests.php tests/phpt
+
+workflows:
+  version: 2
+  commit:
+    jobs:
+      - build
