@@ -21,6 +21,7 @@ if (DD_STATIC_ANALYSIS AND CPP_CHECK_COMMAND)
       "--quiet" 
       "--suppressions-list=${CMAKE_SOURCE_DIR}/CppCheckSuppressions.txt"
       "--force"
+      "--error-exitcode=1"
       )
     # Let user define his own cpp check commands if needed
     if(NOT DEFINED CACHE{CMAKE_C_CPPCHECK})
