@@ -1,5 +1,4 @@
-// To exclude php include warnings (if include libraries are added)
-// *:*/php/.*-nts-ndebug*
-// toomanyconfigs:*
+// To exclude php include warnings from Zend
+*:*/php/.*-nts-ndebug*
 unknownMacro:*php_datadog-profiling*
 missingIncludeSystem
