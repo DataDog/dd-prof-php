@@ -1,10 +1,6 @@
 # Unless explicitly stated otherwise all files in this repository are licensed under the Apache License Version 2.0.
 # This product includes software developed at Datadog (https://www.datadoghq.com/). Copyright 2022-Present Datadog, Inc.
-
-set(CMAKE_VERBOSE_MAKEFILE on)
-
 option(DD_STATIC_ANALYSIS "Enable static analysis tooling" OFF)
-
 find_program(CPP_CHECK_COMMAND NAMES cppcheck)
 
 if (DD_STATIC_ANALYSIS AND CPP_CHECK_COMMAND)
