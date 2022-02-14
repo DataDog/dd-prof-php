@@ -2,3 +2,5 @@
 *:*/php/.*-nts-ndebug*
 unknownMacro:*php_datadog-profiling*
 missingIncludeSystem
+# To avoid unmatched suppressions, we could create suppression files per target
+unmatchedSuppression

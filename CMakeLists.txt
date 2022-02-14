@@ -11,6 +11,9 @@ project(datadog-php-profiling
 # Add cmake/Modules to CMAKE_MODULE_PATH so find_package(PhpConfig) will work
 list(PREPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules")
 
+# Cpp check static analysis
+include(CppCheck)
+
 if(UNIX) # This is probably a bit too broad
   include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/configurations.cmake)
 
@@ -137,6 +140,3 @@ target_include_directories(datadog-profiling
   PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
   PRIVATE $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/components>
 )
-
-# Cpp check static analysis
-include(CppCheck)

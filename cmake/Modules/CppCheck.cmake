@@ -3,8 +3,12 @@
 
 set(CMAKE_VERBOSE_MAKEFILE on)
 
+option(DD_STATIC_ANALYSIS "Enable static analysis tooling" OFF)
+
 find_program(CPP_CHECK_COMMAND NAMES cppcheck)
-if (CPP_CHECK_COMMAND)
+
+if (DD_STATIC_ANALYSIS AND CPP_CHECK_COMMAND)
+
   #The manual : http://cppcheck.sourceforge.net/manual.pdf
   message("-- CppCheck found : ${CPP_CHECK_COMMAND}")
 
@@ -18,4 +22,9 @@ if (CPP_CHECK_COMMAND)
       "--suppressions-list=${CMAKE_SOURCE_DIR}/CppCheckSuppressions.txt"
       "--force"
       )
+    # Let user define his own cpp check commands if needed
+    if(NOT DEFINED CACHE{CMAKE_C_CPPCHECK})
+        set(CMAKE_CXX_CPPCHECK "${CPP_CHECK_COMMAND};--std=c++11")
+        set(CMAKE_C_CPPCHECK "${CPP_CHECK_COMMAND};--std=c11")
+    endif()
 endif()
