@@ -95,11 +95,6 @@ void datadog_php_stack_sample_iterator_dtor(stack_sample_iterator_t *iterator) {
   iterator->depth = 0;
 }
 
-void datadog_php_stack_sample_iterator_rewind(
-    stack_sample_iterator_t *iterator) {
-  iterator->depth = 0;
-}
-
 bool datadog_php_stack_sample_iterator_valid(
     stack_sample_iterator_t *iterator) {
   return iterator->sample && iterator->depth < iterator->sample->depth;

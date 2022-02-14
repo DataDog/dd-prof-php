@@ -200,8 +200,9 @@ static void datadog_profiling_first_activate(void) {
   // Logging plugin must be initialized before diagnosing things
   diagnose_profiling_enabled(datadog_profiling_enabled);
 
-  sapi_t sapi = datadog_php_sapi_detect(
-      datadog_php_string_view_from_cstr(sapi_module.name));
+  datadog_php_string_view module =
+      datadog_php_string_view_from_cstr(sapi_module.name);
+  sapi_t sapi = datadog_php_sapi_from_name(module);
   sapi_diagnose(sapi,
                 datadog_php_string_view_from_cstr(sapi_module.pretty_name));
 

@@ -33,7 +33,3 @@ sapi_t datadog_php_sapi_from_name(string_view_t module) {
 
   return DATADOG_PHP_SAPI_UNKNOWN;
 }
-
-datadog_php_sapi datadog_php_sapi_detect(datadog_php_string_view module) {
-  return datadog_php_sapi_from_name(module);
-}

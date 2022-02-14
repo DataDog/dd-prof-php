@@ -27,8 +27,9 @@ typedef struct datadog_php_queue_s {
   void **buffer; // borrowed, not owned
 } datadog_php_queue;
 
-bool datadog_php_queue_ctor(datadog_php_queue *queue, uint16_t capacity,
-                            void *buffer[C_STATIC(capacity)]);
+__attribute__((nonnull)) bool
+datadog_php_queue_ctor(datadog_php_queue *queue, uint16_t capacity,
+                       void *buffer[C_STATIC(capacity)]);
 
 bool datadog_php_queue_try_pop(datadog_php_queue *queue, void **item_ref);
 bool datadog_php_queue_try_push(datadog_php_queue *queue, void *item);

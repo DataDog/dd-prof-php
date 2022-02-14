@@ -20,12 +20,9 @@ bool datadog_php_queue_try_pop(datadog_php_queue *queue, void **item_ref) {
   return has_item;
 }
 
-bool datadog_php_queue_ctor(datadog_php_queue *queue, uint16_t capacity,
-                            void *buffer[static capacity]) {
-  if (!queue || (capacity && !buffer)) {
-    return false;
-  }
-
+__attribute__((nonnull)) bool
+datadog_php_queue_ctor(datadog_php_queue *queue, uint16_t capacity,
+                       void *buffer[static capacity]) {
   datadog_php_queue q = {
       .size = 0,
       .capacity = capacity,
