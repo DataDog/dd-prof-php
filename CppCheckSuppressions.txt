@@ -1,4 +1,9 @@
 // To exclude php include warnings from Zend
+duplicateExpression:*/php/*-nts-ndebug*
+variableScope:*/php/*-nts-ndebug*
+unusedLabelConfiguration:*/php/*-nts-ndebug*
+unreadVariable:*/php/*-nts-ndebug*
+unusedLabelConfiguration:*/php/*-nts-ndebug*
 unsignedLessThanZero:*/php/*-nts-ndebug*
 ConfigurationNotChecked:*/php/*-nts-ndebug*
 unknownMacro:*php_datadog-profiling*
