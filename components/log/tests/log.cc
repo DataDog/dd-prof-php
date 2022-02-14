@@ -41,7 +41,7 @@ int generate_memfd(void **mem, size_t len) {
 
 TEST_CASE("logv", "[log]") {
   char *mem;
-  size_t mem_len = 32;
+  size_t mem_len = 128;
   int fd = generate_memfd((void **)&mem, mem_len);
   REQUIRE(fd != -1);
   REQUIRE(mem);
