@@ -68,7 +68,8 @@ jobs:
               -DCMAKE_BUILD_TYPE=Release \
               -DDATADOG_PHP_TESTING=on
             cmake --build cmake-build-release
-            cmake --build cmake-build-release --target test
+            cd cmake-build-release
+            ctest --output-on-failure
 
       - run:
           name: Install datadog-profiling
