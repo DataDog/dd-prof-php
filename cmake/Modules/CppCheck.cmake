@@ -15,13 +15,6 @@ if (DD_STATIC_ANALYSIS AND CPP_CHECK_COMMAND)
       "--enable=warning,performance,portability,information,style"
       "--template=${CPPCHECK_TEMPLATE}"
       "--quiet" 
-      "--suppress=duplicateExpression:${PhpConfig_INCLUDE_DIRS}*"
-      "--suppress=variableScope:${PhpConfig_INCLUDE_DIRS}*"
-      "--suppress=unusedLabelConfiguration:${PhpConfig_INCLUDE_DIRS}*"
-      "--suppress=unreadVariable:${PhpConfig_INCLUDE_DIRS}*"
-      "--suppress=unsignedLessThanZero:${PhpConfig_INCLUDE_DIRS}*"
-      "--suppress=ConfigurationNotChecked:${PhpConfig_INCLUDE_DIRS}*"
-      "--suppress=unknownMacro:${PhpConfig_INCLUDE_DIRS}*"
       "--suppress=missingInclude"
       "--suppress=missingIncludeSystem"
       "--suppress=unmatchedSuppression"
@@ -29,11 +22,17 @@ if (DD_STATIC_ANALYSIS AND CPP_CHECK_COMMAND)
       "--error-exitcode=1"
       )
 
-    # Let user define his own cpp check commands if needed
-    if(NOT DEFINED CACHE{CMAKE_C_CPPCHECK})
-      set(CMAKE_C_CPPCHECK "${CPP_CHECK_COMMAND};--std=c11")
-    endif()
-    if(NOT DEFINED CACHE{CMAKE_CXX_CPPCHECK})
-      set(CMAKE_CXX_CPPCHECK "${CPP_CHECK_COMMAND};--std=c++11")
-    endif()
+  # ignore all warnings coming from zend files
+  foreach(ZEND_INCLUDE_PATH ${PhpConfig_INCLUDE_DIRS})
+    list(APPEND CPP_CHECK_COMMAND 
+        "--suppress=*:${ZEND_INCLUDE_PATH}")
+  endforeach()
+
+  # Let user define his own cpp check commands if needed
+  if(NOT DEFINED CACHE{CMAKE_C_CPPCHECK})
+    set(CMAKE_C_CPPCHECK "${CPP_CHECK_COMMAND};--std=c11")
+  endif()
+  if(NOT DEFINED CACHE{CMAKE_CXX_CPPCHECK})
+    set(CMAKE_CXX_CPPCHECK "${CPP_CHECK_COMMAND};--std=c++11")
+  endif()
 endif()
