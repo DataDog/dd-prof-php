@@ -39,13 +39,16 @@ jobs:
               -C /opt/cmake
 
       - run:
-          name: Build datadog-profiling
+          name: Build datadog-profiling and run tests
           command: |
             set -euo pipefail
             export DDProf_ROOT="/opt/libddprof"
             export PATH="/opt/cmake/bin:$PATH"
-            cmake -S . -B cmake-build-release -DCMAKE_BUILD_TYPE=Release
+            cmake -S . -B cmake-build-release \
+              -DCMAKE_BUILD_TYPE=Release \
+              -DDATADOG_PHP_TESTING=on
             cmake --build cmake-build-release
+            cmake --build cmake-build-release --target test
 
       - run:
           name: Install datadog-profiling
@@ -67,16 +70,6 @@ jobs:
             # [Datadog Profiling] Failed to upload profile
             # It should NOT have non-zero exit code.
             DD_PROFILING_ENABLED=yes php --ri datadog-profiling
-
-      - run:
-          name: Run .phpt tests
-          command: |
-            # Honestly, these should be a separate "job" but didn't want to
-            # duplicate installing packages and such.
-            set -euo pipefail
-            extension_dir="$(php-config --extension-dir)"
-            cp -v "$extension_dir/build/run-tests.php" .
-            php run-tests.php tests/phpt
 
   nightly:
     docker:
