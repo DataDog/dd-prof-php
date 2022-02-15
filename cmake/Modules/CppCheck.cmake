@@ -8,7 +8,6 @@ if (DD_STATIC_ANALYSIS AND CPP_CHECK_COMMAND)
   #The manual : http://cppcheck.sourceforge.net/manual.pdf
   message("-- CppCheck found : ${CPP_CHECK_COMMAND}")
 
-  # Listing all files to check manually (we could also use existing variables)
   set(CPPCHECK_TEMPLATE "cppcheck:{id}:{file}:{line}:{severity}:{message}")
 
   list(APPEND CPP_CHECK_COMMAND 
