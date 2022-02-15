@@ -29,6 +29,16 @@ TEST_CASE("recognize real sapis", "[sapi]") {
   }
 }
 
+TEST_CASE("empty sapi", "[sapi]") {
+  const char *empties[] = {"", nullptr};
+
+  for (auto empty : empties) {
+    auto name = datadog_php_string_view_from_cstr(empty);
+    auto sapi = datadog_php_sapi_from_name(name);
+    CHECK(sapi == DATADOG_PHP_SAPI_UNKNOWN);
+  }
+}
+
 TEST_CASE("unknown sapis", "[sapi]") {
   /* These used to be SAPIs, but have since been removed. I think that makes
    * them good testing candidates for unknown SAPIs.

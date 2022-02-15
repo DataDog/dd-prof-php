@@ -102,6 +102,13 @@ void datadog_php_log_level_set(datadog_php_logger *, datadog_php_log_level);
  */
 datadog_php_log_level datadog_php_log_level_detect(datadog_php_string_view val);
 
+/**
+ * Converts the provide log `level` to a static string.
+ * @param level
+ * @return A string
+ */
+const char *datadog_php_log_level_to_str(datadog_php_log_level level);
+
 #undef C_STATIC
 
 #endif // DATADOG_PHP_PROFILER_LOG_H

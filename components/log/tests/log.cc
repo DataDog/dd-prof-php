@@ -41,7 +41,7 @@ int generate_memfd(void **mem, size_t len) {
 
 TEST_CASE("logv", "[log]") {
   char *mem;
-  size_t mem_len = 32;
+  size_t mem_len = 128;
   int fd = generate_memfd((void **)&mem, mem_len);
   REQUIRE(fd != -1);
   REQUIRE(mem);
@@ -70,4 +70,64 @@ TEST_CASE("logv", "[log]") {
   CHECK(munmap(mem, mem_len) == 0);
   CHECK(close(fd) == 0);
   CHECK(pthread_mutex_destroy(&mutex) == 0);
+}
+
+TEST_CASE("detect empty log level", "[log]") {
+  // Treat empty and null the same: use the default (off).
+  const char *names[] = {
+      "",
+      nullptr,
+  };
+
+  for (auto name : names) {
+    auto view = datadog_php_string_view_from_cstr(name);
+    auto log_level = datadog_php_log_level_detect(view);
+    CHECK(log_level == DATADOG_PHP_LOG_OFF);
+  }
+}
+
+TEST_CASE("detect log level", "[log]") {
+  struct {
+    datadog_php_string_view str;
+    datadog_php_log_level level;
+  } options[] = {
+      {{3, "off"}, DATADOG_PHP_LOG_OFF},
+      {{5, "error"}, DATADOG_PHP_LOG_ERROR},
+      {{4, "warn"}, DATADOG_PHP_LOG_WARN},
+      {{4, "info"}, DATADOG_PHP_LOG_INFO},
+      {{5, "debug"}, DATADOG_PHP_LOG_DEBUG},
+  };
+
+  for (auto option : options) {
+    auto log_level = datadog_php_log_level_detect(option.str);
+    CHECK(log_level == option.level);
+  }
+}
+
+TEST_CASE("detect unknown log levels", "[log]") {
+  datadog_php_string_view options[] = {
+      datadog_php_string_view_from_cstr("false"),
+      datadog_php_string_view_from_cstr("trace"),
+      datadog_php_string_view_from_cstr("a bit longer string"),
+  };
+
+  for (auto option : options) {
+    auto log_level = datadog_php_log_level_detect(option);
+    CHECK(log_level == DATADOG_PHP_LOG_UNKNOWN);
+  }
+}
+
+TEST_CASE("log level to string", "[log]") {
+  struct {
+    const char *str;
+    datadog_php_log_level level;
+  } values[] = {
+      {"unknown", DATADOG_PHP_LOG_UNKNOWN},  {"off", DATADOG_PHP_LOG_OFF},
+      {"error", DATADOG_PHP_LOG_ERROR},      {"warn", DATADOG_PHP_LOG_WARN},
+      {"info", DATADOG_PHP_LOG_INFO},        {"debug", DATADOG_PHP_LOG_DEBUG},
+      {"unknown", (datadog_php_log_level)-4}};
+
+  for (auto value : values) {
+    CHECK(value.str == datadog_php_log_level_to_str(value.level));
+  }
 }

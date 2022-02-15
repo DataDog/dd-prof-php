@@ -172,3 +172,21 @@ void datadog_php_log_level_set(logger_t *logger, log_level_t level) {
     pthread_mutex_unlock(logger->mutex);
   }
 }
+
+const char *datadog_php_log_level_to_str(datadog_php_log_level level) {
+  switch (level) {
+  default:
+  case DATADOG_PHP_LOG_UNKNOWN:
+    return "unknown";
+  case DATADOG_PHP_LOG_OFF:
+    return "off";
+  case DATADOG_PHP_LOG_ERROR:
+    return "error";
+  case DATADOG_PHP_LOG_WARN:
+    return "warn";
+  case DATADOG_PHP_LOG_INFO:
+    return "info";
+  case DATADOG_PHP_LOG_DEBUG:
+    return "debug";
+  }
+}
