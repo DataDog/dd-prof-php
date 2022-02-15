@@ -23,11 +23,11 @@ if (DD_STATIC_ANALYSIS AND CPP_CHECK_COMMAND)
       )
 
   # ignore all warnings coming from zend files
-  foreach(ZEND_INCLUDE_PATH ${PhpConfig_INCLUDE_DIRS})
+  foreach(PhpConfig_Single_INCLUDE_PATH ${PhpConfig_INCLUDE_DIRS})
     list(APPEND CPP_CHECK_COMMAND 
-        "--suppress=*:${ZEND_INCLUDE_PATH}")
+        "--suppress=*:${PhpConfig_Single_INCLUDE_PATH}*")
   endforeach()
-
+  message(${CPP_CHECK_COMMAND})
   # Let user define his own cpp check commands if needed
   if(NOT DEFINED CACHE{CMAKE_C_CPPCHECK})
     set(CMAKE_C_CPPCHECK "${CPP_CHECK_COMMAND};--std=c11")
