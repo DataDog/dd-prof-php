@@ -6,7 +6,8 @@ extern "C" {
 
 TEST_CASE("empty queue operations", "[queue]") {
   datadog_php_queue queue;
-  REQUIRE(datadog_php_queue_ctor(&queue, 0, nullptr));
+  void *buffer[1];
+  REQUIRE(datadog_php_queue_ctor(&queue, 0, buffer));
 
   void *item = nullptr;
   REQUIRE(!datadog_php_queue_try_push(&queue, item));
