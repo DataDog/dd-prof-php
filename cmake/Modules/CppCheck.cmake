@@ -28,7 +28,7 @@ if (DD_STATIC_ANALYSIS AND CPP_CHECK_COMMAND)
         "--suppress=*:${PhpConfig_Single_INCLUDE_PATH}*")
   endforeach()
   message(${CPP_CHECK_COMMAND})
-  # Let user define his own cpp check commands if needed
+  # Let user define their own cpp check commands if needed.
   if(NOT DEFINED CACHE{CMAKE_C_CPPCHECK})
     set(CMAKE_C_CPPCHECK "${CPP_CHECK_COMMAND};--std=c11")
   endif()
