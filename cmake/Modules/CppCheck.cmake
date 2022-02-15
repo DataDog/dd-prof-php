@@ -1,9 +1,9 @@
 # Unless explicitly stated otherwise all files in this repository are licensed under the Apache License Version 2.0.
 # This product includes software developed at Datadog (https://www.datadoghq.com/). Copyright 2022-Present Datadog, Inc.
-option(DD_STATIC_ANALYSIS "Enable static analysis tooling" OFF)
+option(DATADOG_PHP_STATIC_ANALYSIS "Enable static analysis tooling" OFF)
 find_program(CPP_CHECK_COMMAND NAMES cppcheck)
 
-if (DD_STATIC_ANALYSIS AND CPP_CHECK_COMMAND)
+if (DATADOG_PHP_STATIC_ANALYSIS AND CPP_CHECK_COMMAND)
 
   #The manual : http://cppcheck.sourceforge.net/manual.pdf
   message("-- CppCheck found : ${CPP_CHECK_COMMAND}")
