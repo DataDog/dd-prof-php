@@ -26,6 +26,9 @@ find_program(PhpConfig_EXECUTABLE
     - <PackageName>_VERSION_MAJOR (used)
     - <PackageName>_VERSION_MINOR (used)
     - <PackageName>_VERSION_PATCH (used)
+
+    The following variables are defined as well:
+    - PhpConfig_PHP_BINARY
  ]]
 
 if(PhpConfig_EXECUTABLE)
@@ -79,6 +82,13 @@ if(PhpConfig_EXECUTABLE)
 
   string(REGEX REPLACE "[0-9]+([0-9][0-9])$" "\\1" PhpConfig_VERSION_PATCH "${PhpConfig_VERNUM}")
   string(REGEX REPLACE "^0([0-9])$" "\\1" PhpConfig_VERSION_PATCH "${PhpConfig_VERSION_PATCH}")
+
+  execute_process(COMMAND ${PhpConfig_EXECUTABLE} --php-binary
+    RESULT_VARIABLE PhpConfig_PHP_BINARY_RESULT
+    OUTPUT_VARIABLE PhpConfig_PHP_BINARY
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+    COMMAND_ERROR_IS_FATAL ANY
+  )
 endif()
 
 find_package_handle_standard_args(PhpConfig

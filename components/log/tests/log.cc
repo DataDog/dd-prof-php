@@ -116,3 +116,18 @@ TEST_CASE("detect unknown log levels", "[log]") {
     CHECK(log_level == DATADOG_PHP_LOG_UNKNOWN);
   }
 }
+
+TEST_CASE("log level to string", "[log]") {
+  struct {
+    const char *str;
+    datadog_php_log_level level;
+  } values[] = {
+      {"unknown", DATADOG_PHP_LOG_UNKNOWN},  {"off", DATADOG_PHP_LOG_OFF},
+      {"error", DATADOG_PHP_LOG_ERROR},      {"warn", DATADOG_PHP_LOG_WARN},
+      {"info", DATADOG_PHP_LOG_INFO},        {"debug", DATADOG_PHP_LOG_DEBUG},
+      {"unknown", (datadog_php_log_level)-4}};
+
+  for (auto value : values) {
+    CHECK(value.str == datadog_php_log_level_to_str(value.level));
+  }
+}

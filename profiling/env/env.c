@@ -17,29 +17,20 @@ datadog_php_profiling_getenvs(datadog_php_profiling_env *env,
                               const sapi_module_struct *sapi,
                               datadog_php_arena *arena) {
 
-  // Ensure names[i] and values[i] are in sync.
-  const char *names[9] = {
-      "DD_AGENT_HOST",
-      "DD_ENV",
-      "DD_PROFILING_ENABLED",
-      "DD_PROFILING_EXPERIMENTAL_CPU_ENABLED",
-      "DD_PROFILING_LOG_LEVEL",
-      "DD_SERVICE",
-      "DD_TRACE_AGENT_PORT",
-      "DD_TRACE_AGENT_URL",
-      "DD_VERSION",
-  };
-
-  datadog_php_string_view *values[9] = {
-      &env->agent_host,
-      &env->env,
-      &env->profiling_enabled,
-      &env->profiling_experimental_cpu_enabled,
-      &env->profiling_log_level,
-      &env->service,
-      &env->trace_agent_port,
-      &env->trace_agent_url,
-      &env->version,
+  struct {
+    const char *name;
+    datadog_php_string_view *value;
+  } envs[] = {
+      {"DD_AGENT_HOST", &env->agent_host},
+      {"DD_ENV", &env->env},
+      {"DD_PROFILING_ENABLED", &env->profiling_enabled},
+      {"DD_PROFILING_EXPERIMENTAL_CPU_ENABLED",
+       &env->profiling_experimental_cpu_enabled},
+      {"DD_PROFILING_LOG_LEVEL", &env->profiling_log_level},
+      {"DD_SERVICE", &env->service},
+      {"DD_TRACE_AGENT_PORT", &env->trace_agent_port},
+      {"DD_TRACE_AGENT_URL", &env->trace_agent_url},
+      {"DD_VERSION", &env->version},
   };
 
 #if PHP_VERSION_ID >= 70400
@@ -52,8 +43,9 @@ datadog_php_profiling_getenvs(datadog_php_profiling_env *env,
   static const uint32_t align = _Alignof(max_align_t);
 
   size_t i; // declared out-of-loop because of env unlock before returning
-  for (i = 0; i != 9; ++i) {
-    const char *name = names[i];
+  size_t n = sizeof envs / sizeof envs[0];
+  for (i = 0; i != n; ++i) {
+    const char *name = envs[i].name;
 
     // try the SAPI first
     char *val =
@@ -75,13 +67,13 @@ datadog_php_profiling_getenvs(datadog_php_profiling_env *env,
      */
     memcpy(bytes, view.ptr, view.len + 1);
 
-    values[i]->len = view.len;
-    values[i]->ptr = (const char *)bytes;
+    envs[i].value->len = view.len;
+    envs[i].value->ptr = (const char *)bytes;
   }
 
 #if PHP_VERSION_ID >= 70400
   tsrm_env_unlock();
 #endif
 
-  return i == 9;
+  return i == n;
 }
