@@ -37,12 +37,32 @@ jobs:
             tar -x --strip-components 1 \
               -f cmake-3.22.1-linux-x86_64.tar.gz \
               -C /opt/cmake
+            curl -OL https://github.com/catchorg/Catch2/archive/refs/tags/v2.13.8.tar.gz
+            sha256sum="b9b592bd743c09f13ee4bf35fc30eeee2748963184f6bea836b146e6cc2a585a"
+            echo "$sha256sum  v2.13.8.tar.gz"
+            mkdir -vp /tmp/catch2-src /tmp/catch2-build
+            sudo mkdir -vp /opt/catch2
+            sudo chown $user /opt/catch2
+            tar -x --strip-components 1 \
+              -f v2.13.8.tar.gz \
+              -C /tmp/catch2-src
+            cmake -S /tmp/catch2-src -B /tmp/catch2-build \
+              -DCMAKE_BUILD_TYPE=Release \
+              -DCMAKE_INSTALL_PREFIX=/opt/catch2 \
+              -DBUILD_SHARED_LIBS=on \
+              -DCMAKE_POSITION_INDEPENDENT_CODE=on \
+              -DCATCH_INSTALL_DOCS=off \
+              -DCATCH_BUILD_TESTING=off \
+              -DCATCH_BUILD_STATIC_LIBRARY=on
+            cmake --build /tmp/catch2-build --parallel $(nproc)
+            cmake --install /tmp/catch2-build
 
       - run:
           name: Build datadog-profiling and run tests
           command: |
             set -euo pipefail
             export DDProf_ROOT="/opt/libddprof"
+            export Catch2_ROOT="/opt/catch2"
             export PATH="/opt/cmake/bin:$PATH"
             cmake -S . -B cmake-build-release \
               -DCMAKE_BUILD_TYPE=Release \
