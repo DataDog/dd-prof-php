@@ -11,9 +11,6 @@ project(datadog-php-profiling
 # Add cmake/Modules to CMAKE_MODULE_PATH so find_package(PhpConfig) will work
 list(PREPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules")
 
-# Cpp check static analysis
-include(CppCheck)
-
 if(UNIX) # This is probably a bit too broad
   include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/configurations.cmake)
 
@@ -64,6 +61,9 @@ endif ()
 find_package(Threads REQUIRED)
 find_package(PhpConfig 7.1...<8.2 REQUIRED)
 find_package(PkgConfig REQUIRED)
+
+# Cpp check static analysis
+include(CppCheck)
 
 #[[ Prefer libuv-static, but note that it needs to be built with Position
     Independent Code (PIC).
