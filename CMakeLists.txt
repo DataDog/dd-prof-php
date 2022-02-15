@@ -90,7 +90,7 @@ add_library(
 #[[ Note that linking directly to libc dynamically is actually important!
     Without it, on Alpine it will sometimes link libc in statically, and then
     we hide the symbols with a linker script, and then __vdsosym will fail to
-    find symbols in libc like like clock_gettime!
+    find symbols in libc like clock_gettime!
  ]]
 target_link_libraries(
   datadog-profiling
