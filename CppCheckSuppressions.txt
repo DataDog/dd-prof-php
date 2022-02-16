@@ -1,5 +1,0 @@
-// To exclude php include warnings (if include libraries are added)
-// *:*/php/.*-nts-ndebug*
-// toomanyconfigs:*
-unknownMacro:*php_datadog-profiling*
-missingIncludeSystem

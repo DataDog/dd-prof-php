@@ -64,6 +64,9 @@ find_package(Threads REQUIRED)
 find_package(PhpConfig 7.1...<8.2 REQUIRED)
 find_package(PkgConfig REQUIRED)
 
+# Cpp check static analysis
+include(CppCheck)
+
 #[[ Prefer libuv-static, but note that it needs to be built with Position
     Independent Code (PIC).
  ]]
@@ -137,9 +140,6 @@ target_include_directories(
   datadog-profiling
   PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
   PRIVATE $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/components>)
-
-# Cpp check static analysis
-include(CppCheck)
 
 if(DATADOG_PHP_TESTING)
   add_subdirectory(tests)
