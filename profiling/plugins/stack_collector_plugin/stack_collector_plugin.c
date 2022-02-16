@@ -1,5 +1,6 @@
 #include "stack_collector_plugin.h"
 
+#include "../../context.h"
 #include "../log_plugin/log_plugin.h"
 #include "../recorder_plugin/recorder_plugin.h"
 #include <components/time/time.h>
@@ -350,8 +351,11 @@ static void datadog_php_stack_collector_interrupt_function(
       .cpu_time = cpu_time,
   };
 
+  struct ddtrace_profiling_context context =
+      datadog_profiling_get_profiling_context();
+
   datadog_php_recorder_plugin_record(values, zend_thread_id,
-                                     &thread_globals.sample);
+                                     &thread_globals.sample, context);
 }
 
 ZEND_API void

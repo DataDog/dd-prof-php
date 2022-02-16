@@ -46,6 +46,7 @@ typedef struct record_msg_s record_msg;
 struct record_msg_s {
   datadog_php_record_values record_values;
   int64_t thread_id;
+  ddtrace_profiling_context context;
   datadog_php_stack_sample sample;
 };
 
@@ -66,10 +67,9 @@ static const uint16_t CHANNEL_CAPACITY = UINT16_C(256);
  */
 static const uint64_t UPLOAD_TIMEOUT_MS = 10000;
 
-__attribute__((nonnull)) bool
-datadog_php_recorder_plugin_record(datadog_php_record_values record_values,
-                                   int64_t tid,
-                                   const datadog_php_stack_sample *sample) {
+__attribute__((nonnull)) bool datadog_php_recorder_plugin_record(
+    datadog_php_record_values record_values, int64_t tid,
+    const datadog_php_stack_sample *sample, ddtrace_profiling_context context) {
   if (!datadog_php_profiling_recorder_enabled) {
     const char *str =
         "[Datadog Profiling] Sample dropped because profiling has been disabled.";
@@ -87,6 +87,7 @@ datadog_php_recorder_plugin_record(datadog_php_record_values record_values,
     message->record_values = record_values;
     message->sample = *sample;
     message->thread_id = tid;
+    message->context = context;
 
     bool success = channel.sender.send(&channel.sender, message);
     if (!success) {
@@ -193,6 +194,32 @@ static bool is_empty_frame(datadog_php_stack_sample_frame *frame) {
   return (frame->function.len | frame->file.len) == 0;
 }
 
+// convert the id to a string, not a num!
+static struct ddprof_ffi_Slice_c_char label_u64(char buffer[static 20],
+                                                uint64_t id) {
+  char tmp[21] = {0};
+  struct ddprof_ffi_Slice_c_char val = {.ptr = "", .len = 0};
+  int size = snprintf(tmp, sizeof tmp, "%" PRIu64, id);
+  if (size > 0 && size < sizeof tmp) {
+    memcpy(buffer, tmp, size);
+    val = (struct ddprof_ffi_Slice_c_char){buffer, size};
+  }
+  return val;
+}
+
+// convert the id to a string, not a num!
+static struct ddprof_ffi_Slice_c_char label_i64(char buffer[static 21],
+                                                int64_t id) {
+  char tmp[22] = {0};
+  struct ddprof_ffi_Slice_c_char val = {.ptr = "", .len = 0};
+  int size = snprintf(tmp, sizeof tmp, "%" PRId64, id);
+  if (size > 0 && size < sizeof tmp) {
+    memcpy(buffer, tmp, size);
+    val = (struct ddprof_ffi_Slice_c_char){buffer, size};
+  }
+  return val;
+}
+
 static void datadog_php_recorder_add(struct ddprof_ffi_Profile *profile,
                                      record_msg *message) {
   uint32_t locations_capacity = message->sample.depth;
@@ -256,25 +283,34 @@ static void datadog_php_recorder_add(struct ddprof_ffi_Profile *profile,
   struct ddprof_ffi_Slice_i64 values = {.ptr = values_storage,
                                         .len = values_storage_len};
 
-  char thread_id_str[24];
-  size_t thread_id_len;
-  int result = snprintf(thread_id_str, sizeof thread_id_str, "%" PRId64,
-                        message->thread_id);
-  if (result <= 0 || ((size_t)result) >= sizeof thread_id_str) {
-    // include null byte in copy
-    thread_id_len = sizeof("{unknown thread id}") - 1;
-    memcpy(thread_id_str, "{unknown thread id}", thread_id_len + 1);
-  } else {
-    thread_id_len = result;
-  }
-  ddprof_ffi_Label thread_id_label = {
-      .key = {"thread id", sizeof("thread id") - 1},
-      .str = {thread_id_str, thread_id_len},
+  char thread_id_str[24] = "";
+  struct ddprof_ffi_Slice_c_char thread_id_slice =
+      label_i64(thread_id_str, message->thread_id);
+
+  char local_root_span_id_str[24] = "";
+  struct ddprof_ffi_Slice_c_char local_root_span_id =
+      label_u64(local_root_span_id_str, message->context.local_root_span_id);
+
+  char span_id_str[24] = "";
+  struct ddprof_ffi_Slice_c_char span_id =
+      label_u64(span_id_str, message->context.span_id);
+
+  ddprof_ffi_Label labels[] = {
+      {.key = {ZEND_STRL("thread id")}, .str = thread_id_slice},
+      {.key = {ZEND_STRL("local root span id")}, .str = local_root_span_id},
+      {.key = {ZEND_STRL("span id")}, .str = span_id},
   };
+
+  size_t n_labels = sizeof labels / sizeof labels[0];
+  // seems something failed
+  if (span_id.len == 0 || local_root_span_id.len == 0) {
+    n_labels -= 2;
+  }
+
   struct ddprof_ffi_Sample sample = {
       .values = values,
       .locations = {.ptr = locations, .len = locations_size},
-      .labels = {.ptr = &thread_id_label, .len = 1},
+      .labels = {.ptr = labels, .len = n_labels},
   };
 
   ddprof_ffi_Profile_add(profile, sample);
@@ -435,6 +471,12 @@ recorder_first_activate_helper(const datadog_php_profiling_config *config) {
   datadog_php_profiling_cpu_time_enabled =
       config->profiling_experimental_cpu_enabled;
 
+  datadog_php_uuid runtime_id = datadog_profiling_runtime_id();
+  char runtime_val[37] = {0};
+  if (!datadog_php_uuid_is_nil(runtime_id)) {
+    datadog_php_uuid_encode36(runtime_id, runtime_val);
+  }
+
   ddprof_ffi_Tag tags_[] = {
       {.name = to_byteslice("language"), .value = to_byteslice("php")},
       {.name = to_byteslice("service"),
@@ -444,6 +486,7 @@ recorder_first_activate_helper(const datadog_php_profiling_config *config) {
        .value = sv_to_byteslice(config->version)},
       {.name = to_byteslice("profiler_version"),
        .value = to_byteslice(PHP_DATADOG_PROFILING_VERSION)},
+      {.name = to_byteslice("runtime-id"), .value = to_byteslice(runtime_val)},
   };
 
   ddprof_ffi_Slice_tag tags = {.ptr = tags_,
