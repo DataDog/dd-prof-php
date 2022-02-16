@@ -104,6 +104,7 @@ target_link_libraries(
           datadog-php-stack-sample
           datadog_php_string_view
           datadog-php-time
+          datadog-php-uuid
           DDProf::FFI
           PkgConfig::UV
           PhpConfig::PhpConfig
