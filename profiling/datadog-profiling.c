@@ -11,11 +11,13 @@
 // must come after php.h
 #include <ext/standard/html.h>
 #include <ext/standard/info.h>
+#include <ext/standard/php_random.h>
 
 #include "components/log/log.h"
 #include "components/sapi/sapi.h"
 #include "components/string_view/string_view.h"
 #include "config/config.h"
+#include "context.h"
 #include "env/env.h"
 #include "plugins/log_plugin/log_plugin.h"
 #include "plugins/recorder_plugin/recorder_plugin.h"
@@ -30,6 +32,7 @@ static uv_once_t first_activate_once = UV_ONCE_INIT;
 static uint8_t profiling_env_storage[4096];
 static datadog_php_profiling_env profiling_env;
 static datadog_php_profiling_config profiling_config;
+static datadog_php_uuid runtime_id = DATADOG_PHP_UUID_INIT;
 
 static void datadog_info_print_esc_view(datadog_php_string_view str);
 static void datadog_info_print_esc(const char *str);
@@ -175,6 +178,11 @@ static void datadog_profiling_first_activate(void) {
     profiling_config.profiling_enabled = false;
   }
 
+  alignas(16) uint8_t data[16];
+  if (php_random_bytes_silent(data, sizeof data) == SUCCESS) {
+    datadog_php_uuidv4_bytes_ctor(&runtime_id, data);
+  }
+
   datadog_profiling_enabled = profiling_config.profiling_enabled;
 
   datadog_php_log_plugin_first_activate(&profiling_config);
@@ -233,6 +241,37 @@ void datadog_profiling_info_diagnostics_row(const char *col_a,
   datadog_info_print("</td><td class='v'>");
   datadog_info_print_esc(col_b);
   datadog_info_print("</td></tr>\n");
+}
+
+ZEND_API datadog_php_uuid datadog_profiling_runtime_id(void) {
+  return runtime_id;
+}
+
+static struct ddtrace_profiling_context
+datadog_profiling_get_profiling_context_null(void) {
+  return (struct ddtrace_profiling_context){0, 0};
+}
+
+// Default to null implementation to cut down on the number of edges of caller.
+struct ddtrace_profiling_context (*datadog_profiling_get_profiling_context)(
+    void) = &datadog_profiling_get_profiling_context_null;
+
+void datadog_profiling_message_handler(int message, void *arg) {
+  if (UNEXPECTED(message != ZEND_EXTMSG_NEW_EXTENSION)) {
+    // There are currently no other defined messages.
+    return;
+  }
+
+  zend_extension *extension = (zend_extension *)arg;
+  if (extension->name && strcmp(extension->name, "ddtrace") == 0) {
+    DL_HANDLE handle = extension->handle;
+
+    struct ddtrace_profiling_context (*get_profiling)(void) =
+        DL_FETCH_SYMBOL(handle, "ddtrace_get_profiling_context");
+    if (EXPECTED(get_profiling)) {
+      datadog_profiling_get_profiling_context = get_profiling;
+    }
+  }
 }
 
 bool datadog_php_string_view_is_boolean_true(string_view_t str) {

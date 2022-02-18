@@ -3,6 +3,7 @@
 
 #include <Zend/zend_extensions.h>
 #include <config/config.h>
+#include <profiling/context.h>
 #include <stack-collector/stack-collector.h>
 #include <stdatomic.h>
 #include <stdbool.h>
@@ -22,10 +23,9 @@ typedef struct datadog_php_record_values {
   int64_t cpu_time;  // cpu time in ns since last sample, may be 0
 } datadog_php_record_values;
 
-__attribute__((nonnull)) bool
-datadog_php_recorder_plugin_record(datadog_php_record_values record_values,
-                                   int64_t tid,
-                                   const datadog_php_stack_sample *sample);
+__attribute__((nonnull)) bool datadog_php_recorder_plugin_record(
+    datadog_php_record_values record_values, int64_t tid,
+    const datadog_php_stack_sample *sample, ddtrace_profiling_context context);
 
 void datadog_php_recorder_plugin_first_activate(
     const datadog_php_profiling_config *config);
