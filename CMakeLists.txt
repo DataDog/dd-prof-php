@@ -77,7 +77,20 @@ endif()
 
 add_subdirectory(components)
 
+# Prefer static libddprof to shared
+set(_DATADOG_PHP_ORIG_CMAKE_FIND_LIBRARY_SUFFIXES
+    ${CMAKE_FIND_LIBRARY_SUFFIXES})
+if(CMAKE_SYSTEM_NAME MATCHES "Linux")
+  set(CMAKE_FIND_LIBRARY_SUFFIXES .a .so)
+elseif(CMAKE_SYSTEM_NAME MATCHES "Darwin")
+  set(CMAKE_FIND_LIBRARY_SUFFIXES .a .dylib .so .tbd)
+endif()
+
 find_package(DDProf REQUIRED)
+
+# Restore
+set(CMAKE_FIND_LIBRARY_SUFFIXES
+    ${_DATADOG_PHP_ORIG_CMAKE_FIND_LIBRARY_SUFFIXES})
 
 add_subdirectory(profiling)
 
