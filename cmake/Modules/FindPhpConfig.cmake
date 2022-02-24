@@ -31,7 +31,8 @@ find_program(
     - <PackageName>_VERSION_PATCH (used)
 
     The following variables are defined as well:
-    - PhpConfig_PHP_BINARY
+    - PhpConfig_PHP_BINARY (php-config --php-binary)
+    - PhpConfig_VERNUM (php-config --vernum)
  ]]
 
 if(PhpConfig_EXECUTABLE)
