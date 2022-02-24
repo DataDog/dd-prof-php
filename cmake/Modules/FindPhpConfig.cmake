@@ -6,10 +6,13 @@ include(FindPackageHandleStandardArgs)
 if(DEFINED ENV{PhpConfig_ROOT})
   set(PhpConfig_ROOT "$ENV{PhpConfig_ROOT}")
 elseif(NOT PhpConfig_ROOT)
-  set(PhpConfig_ROOT "" CACHE STRING "Directory containing bin/php-config")
+  set(PhpConfig_ROOT
+      ""
+      CACHE STRING "Directory containing bin/php-config")
 endif()
 
-find_program(PhpConfig_EXECUTABLE
+find_program(
+  PhpConfig_EXECUTABLE
   NAMES php-config
   HINTS ${PhpConfig_ROOT} # not quoted! Need it to expand to a list.
 )
@@ -32,70 +35,68 @@ find_program(PhpConfig_EXECUTABLE
  ]]
 
 if(PhpConfig_EXECUTABLE)
-  execute_process(COMMAND ${PhpConfig_EXECUTABLE} --prefix
+  execute_process(
+    COMMAND ${PhpConfig_EXECUTABLE} --prefix
     RESULT_VARIABLE PhpConfig_PREFIX_RESULT
     OUTPUT_VARIABLE PhpConfig_ROOT_DIR
-    OUTPUT_STRIP_TRAILING_WHITESPACE
-    COMMAND_ERROR_IS_FATAL ANY
-  )
+    OUTPUT_STRIP_TRAILING_WHITESPACE COMMAND_ERROR_IS_FATAL ANY)
 
-  execute_process(COMMAND ${PhpConfig_EXECUTABLE} --includes
+  execute_process(
+    COMMAND ${PhpConfig_EXECUTABLE} --includes
     RESULT_VARIABLE PhpConfig_INCLUDES_RESULT
     OUTPUT_VARIABLE PhpConfig_INCLUDE_DIRS
-    OUTPUT_STRIP_TRAILING_WHITESPACE
-    COMMAND_ERROR_IS_FATAL ANY
-  )
+    OUTPUT_STRIP_TRAILING_WHITESPACE COMMAND_ERROR_IS_FATAL ANY)
 
-  execute_process(COMMAND ${PhpConfig_EXECUTABLE} --ldflags
+  execute_process(
+    COMMAND ${PhpConfig_EXECUTABLE} --ldflags
     RESULT_VARIABLE PhpConfig_LDFLAGS_RESULT
     OUTPUT_VARIABLE PhpConfig_LIBRARY_DIRS
-    OUTPUT_STRIP_TRAILING_WHITESPACE
-    COMMAND_ERROR_IS_FATAL ANY
-  )
+    OUTPUT_STRIP_TRAILING_WHITESPACE COMMAND_ERROR_IS_FATAL ANY)
 
-  execute_process(COMMAND ${PhpConfig_EXECUTABLE} --libs
+  execute_process(
+    COMMAND ${PhpConfig_EXECUTABLE} --libs
     RESULT_VARIABLE PhpConfig_LIBS_RESULT
     OUTPUT_VARIABLE PhpConfig_LIBRARIES
-    OUTPUT_STRIP_TRAILING_WHITESPACE
-    COMMAND_ERROR_IS_FATAL ANY
-  )
+    OUTPUT_STRIP_TRAILING_WHITESPACE COMMAND_ERROR_IS_FATAL ANY)
 
-  execute_process(COMMAND ${PhpConfig_EXECUTABLE} --version
+  execute_process(
+    COMMAND ${PhpConfig_EXECUTABLE} --version
     RESULT_VARIABLE PhpConfig_VERSION_RESULT
     OUTPUT_VARIABLE PhpConfig_VERSION
-    OUTPUT_STRIP_TRAILING_WHITESPACE
-    COMMAND_ERROR_IS_FATAL ANY
-  )
+    OUTPUT_STRIP_TRAILING_WHITESPACE COMMAND_ERROR_IS_FATAL ANY)
 
-  execute_process(COMMAND ${PhpConfig_EXECUTABLE} --vernum
+  execute_process(
+    COMMAND ${PhpConfig_EXECUTABLE} --vernum
     RESULT_VARIABLE PhpConfig_VERNUM_RESULT
     OUTPUT_VARIABLE PhpConfig_VERNUM
-    OUTPUT_STRIP_TRAILING_WHITESPACE
-    COMMAND_ERROR_IS_FATAL ANY
-  )
+    OUTPUT_STRIP_TRAILING_WHITESPACE COMMAND_ERROR_IS_FATAL ANY)
 
-  string(REGEX REPLACE "^([0-9]+)[0-9][0-9][0-9][0-9]$" "\\1" PhpConfig_VERSION_MAJOR "${PhpConfig_VERNUM}")
-  string(REGEX REPLACE "^0([0-9])$" "\\1" PhpConfig_VERSION_MAJOR "${PhpConfig_VERSION_MAJOR}")
+  string(REGEX REPLACE "^([0-9]+)[0-9][0-9][0-9][0-9]$" "\\1"
+                       PhpConfig_VERSION_MAJOR "${PhpConfig_VERNUM}")
+  string(REGEX REPLACE "^0([0-9])$" "\\1" PhpConfig_VERSION_MAJOR
+                       "${PhpConfig_VERSION_MAJOR}")
 
-  string(REGEX REPLACE "[0-9]+([0-9][0-9])[0-9][0-9]$" "\\1" PhpConfig_VERSION_MINOR "${PhpConfig_VERNUM}")
-  string(REGEX REPLACE "^0([0-9])$" "\\1" PhpConfig_VERSION_MINOR "${PhpConfig_VERSION_MINOR}")
+  string(REGEX REPLACE "[0-9]+([0-9][0-9])[0-9][0-9]$" "\\1"
+                       PhpConfig_VERSION_MINOR "${PhpConfig_VERNUM}")
+  string(REGEX REPLACE "^0([0-9])$" "\\1" PhpConfig_VERSION_MINOR
+                       "${PhpConfig_VERSION_MINOR}")
 
-  string(REGEX REPLACE "[0-9]+([0-9][0-9])$" "\\1" PhpConfig_VERSION_PATCH "${PhpConfig_VERNUM}")
-  string(REGEX REPLACE "^0([0-9])$" "\\1" PhpConfig_VERSION_PATCH "${PhpConfig_VERSION_PATCH}")
+  string(REGEX REPLACE "[0-9]+([0-9][0-9])$" "\\1" PhpConfig_VERSION_PATCH
+                       "${PhpConfig_VERNUM}")
+  string(REGEX REPLACE "^0([0-9])$" "\\1" PhpConfig_VERSION_PATCH
+                       "${PhpConfig_VERSION_PATCH}")
 
-  execute_process(COMMAND ${PhpConfig_EXECUTABLE} --php-binary
+  execute_process(
+    COMMAND ${PhpConfig_EXECUTABLE} --php-binary
     RESULT_VARIABLE PhpConfig_PHP_BINARY_RESULT
     OUTPUT_VARIABLE PhpConfig_PHP_BINARY
-    OUTPUT_STRIP_TRAILING_WHITESPACE
-    COMMAND_ERROR_IS_FATAL ANY
-  )
+    OUTPUT_STRIP_TRAILING_WHITESPACE COMMAND_ERROR_IS_FATAL ANY)
 endif()
 
-find_package_handle_standard_args(PhpConfig
+find_package_handle_standard_args(
+  PhpConfig
   REQUIRED_VARS PhpConfig_EXECUTABLE PhpConfig_ROOT_DIR
-  VERSION_VAR PhpConfig_VERSION
-  HANDLE_VERSION_RANGE
-)
+  VERSION_VAR PhpConfig_VERSION HANDLE_VERSION_RANGE)
 
 if(PhpConfig_FOUND)
   separate_arguments(PhpConfig_INCLUDE_DIRS)
