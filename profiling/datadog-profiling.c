@@ -178,12 +178,13 @@ static void datadog_profiling_first_activate(void) {
     profiling_config.profiling_enabled = false;
   }
 
+  datadog_profiling_enabled = profiling_config.profiling_enabled;
+
   alignas(16) uint8_t data[16];
-  if (php_random_bytes_silent(data, sizeof data) == SUCCESS) {
+  if (datadog_profiling_enabled &&
+      php_random_bytes_silent(data, sizeof data) == SUCCESS) {
     datadog_php_uuidv4_bytes_ctor(&runtime_id, data);
   }
-
-  datadog_profiling_enabled = profiling_config.profiling_enabled;
 
   datadog_php_log_plugin_first_activate(&profiling_config);
 
