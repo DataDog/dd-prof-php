@@ -594,6 +594,35 @@ static void upload_log_cstr(datadog_php_log_level level, const char *cstr) {
   upload_log(level, datadog_php_string_view_from_cstr(cstr));
 }
 
+static void
+datadog_php_recorder_collect(const datadog_php_profiling_config *config,
+                             struct ddprof_ffi_Profile *profile) {
+  record_msg message = {
+      .record_values = {1, 0, 0},
+      .context = datadog_profiling_get_profiling_context(),
+      .thread_id = (int64_t)uv_thread_self(),
+  };
+
+  uint64_t wall_before = uv_hrtime();
+  datadog_php_cpu_time_result cpu_before = datadog_php_cpu_time_now();
+  datadog_php_stack_collect(EG(current_execute_data), &message.sample);
+  datadog_php_cpu_time_result cpu_after = datadog_php_cpu_time_now();
+  uint64_t wall_after = uv_hrtime();
+
+  if (config->profiling_experimental_cpu_enabled &&
+      cpu_before.tag == DATADOG_PHP_CPU_TIME_OK &&
+      cpu_after.tag == DATADOG_PHP_CPU_TIME_OK) {
+    struct timespec then = cpu_before.ok, now = cpu_after.ok;
+    int64_t current = now.tv_sec * INT64_C(1000000000) + now.tv_nsec;
+    int64_t prev = then.tv_sec * INT64_C(1000000000) + then.tv_nsec;
+    message.record_values.cpu_time = current - prev;
+  }
+
+  message.record_values.wall_time = (int64_t)(wall_after - wall_before);
+
+  datadog_php_recorder_add(profile, &message);
+}
+
 void datadog_php_recorder_plugin_diagnose(
     const datadog_php_profiling_config *config) {
   const char *yes = "true", *no = "false";
@@ -612,6 +641,8 @@ void datadog_php_recorder_plugin_diagnose(
         .logv = upload_logv,
         .log_cstr = upload_log_cstr,
     };
+
+    datadog_php_recorder_collect(config, profile);
 
     php_info_print_table_colspan_header(2, "Profiling Upload Diagnostics");
     bool uploaded = ddprof_ffi_export(&logger, profile, UPLOAD_TIMEOUT_MS);
