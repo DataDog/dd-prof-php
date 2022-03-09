@@ -38,6 +38,10 @@ foreach ($lines as $line) {
     $values[trim($pair[0])] = trim($pair[1]);
 }
 
+// Check that Version exists, but not its value
+assert(isset($values["Version"]));
+
+// Check exact values for this set
 $sections = [
     ["Profiling Enabled", "false"],
     ["Experimental CPU Profiling Enabled", "true"],

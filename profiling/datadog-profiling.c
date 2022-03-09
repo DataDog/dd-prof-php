@@ -68,7 +68,10 @@ static void diagnose_endpoint(ddprof_ffi_EndpointV3 endpoint) {
 static void
 datadog_php_config_diagnose(const datadog_php_profiling_config *config) {
   const char *yes = "true", *no = "false";
-  php_info_print_table_colspan_header(2, "Profiling Inferred Configuration");
+  php_info_print_table_colspan_header(
+      2, "Datadog Profiling Inferred Configuration");
+  datadog_profiling_info_diagnostics_row("Version",
+                                         PHP_DATADOG_PROFILING_VERSION);
   datadog_profiling_info_diagnostics_row("Profiling Enabled",
                                          config->profiling_enabled ? yes : no);
   datadog_profiling_info_diagnostics_row(
