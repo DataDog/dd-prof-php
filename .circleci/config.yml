@@ -20,8 +20,8 @@ jobs:
           command: |
             set -euo pipefail
             user=$(whoami)
-            curl -OL https://github.com/DataDog/libddprof/releases/download/v0.4.0-rc.1/libddprof-x86_64-unknown-linux-gnu.tar.gz
-            sha256sum="6b18703b24b5408d7071bfe1ddeb5bf73454ad6669e31b37a8401ad94ca9aed6"
+            curl -OL https://github.com/DataDog/libddprof/releases/download/v0.5.0-rc.1/libddprof-x86_64-unknown-linux-gnu.tar.gz
+            sha256sum="2db92e2ad87005a043e415fd62079af1f1df3642be9bed3ade840c5533a61063"
             echo "$sha256sum  libddprof-x86_64-unknown-linux-gnu.tar.gz" | sha256sum -c
             export DDProf_ROOT="/opt/libddprof"
             sudo mkdir -p "$DDProf_ROOT"

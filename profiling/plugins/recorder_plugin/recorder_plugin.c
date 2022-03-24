@@ -16,14 +16,14 @@
 // must come after php.h
 #include <ext/standard/info.h>
 
-#define SLICE_LITERAL(str)                                                     \
-  (struct ddprof_ffi_Slice_c_char) { .ptr = (str), .len = sizeof(str) - 1 }
+#define CHARSLICE_C(str) DDPROF_FFI_CHARSLICE_C(str)
 
-ddprof_ffi_ByteSlice to_byteslice(const char *str) {
-  return (ddprof_ffi_ByteSlice){(const uint8_t *)str, strlen(str)};
+static ddprof_ffi_CharSlice to_charslice(const char *str) {
+  return (ddprof_ffi_CharSlice){str, strlen(str)};
 }
-ddprof_ffi_ByteSlice sv_to_byteslice(datadog_php_string_view view) {
-  return (ddprof_ffi_ByteSlice){(const uint8_t *)view.ptr, view.len};
+
+static ddprof_ffi_CharSlice sv_to_charslice(datadog_php_string_view view) {
+  return (ddprof_ffi_CharSlice){view.ptr, view.len};
 }
 
 atomic_bool datadog_php_profiling_recorder_enabled = false;
@@ -132,15 +132,13 @@ static bool ddprof_ffi_export(datadog_php_static_logger *logger,
   ddprof_ffi_Timespec start = encoded_profile->start;
   ddprof_ffi_Timespec end = encoded_profile->end;
 
-  ddprof_ffi_Buffer profile_buffer = {
-      .ptr = encoded_profile->buffer.ptr,
-      .len = encoded_profile->buffer.len,
-      .capacity = encoded_profile->buffer.capacity,
-  };
-
   ddprof_ffi_File files_[] = {{
-      .name = to_byteslice("profile.pprof"),
-      .file = &profile_buffer,
+      .name = CHARSLICE_C("profile.pprof"),
+      .file =
+          (ddprof_ffi_ByteSlice){
+              .ptr = encoded_profile->buffer.ptr,
+              .len = encoded_profile->buffer.len,
+          },
   }};
 
   struct ddprof_ffi_Slice_file files = {.ptr = files_,
@@ -323,8 +321,8 @@ free_locations:
 static const struct ddprof_ffi_Period period = {
     .type_ =
         {
-            .type_ = SLICE_LITERAL("wall-time"),
-            .unit = SLICE_LITERAL("nanoseconds"),
+            .type_ = CHARSLICE_C("wall-time"),
+            .unit = CHARSLICE_C("nanoseconds"),
         },
 
     /* An interval of 60 seconds often ends up with an HTTP 502 Bad Gateway
@@ -348,16 +346,16 @@ static struct ddprof_ffi_Profile *profile_new(void) {
    */
   static struct ddprof_ffi_ValueType value_types[3] = {
       {
-          .type_ = SLICE_LITERAL("sample"),
-          .unit = SLICE_LITERAL("count"),
+          .type_ = CHARSLICE_C("sample"),
+          .unit = CHARSLICE_C("count"),
       },
       {
-          .type_ = SLICE_LITERAL("wall-time"),
-          .unit = SLICE_LITERAL("nanoseconds"),
+          .type_ = CHARSLICE_C("wall-time"),
+          .unit = CHARSLICE_C("nanoseconds"),
       },
       {
-          .type_ = SLICE_LITERAL("cpu-time"),
-          .unit = SLICE_LITERAL("nanoseconds"),
+          .type_ = CHARSLICE_C("cpu-time"),
+          .unit = CHARSLICE_C("nanoseconds"),
       },
   };
 
@@ -478,22 +476,22 @@ recorder_first_activate_helper(const datadog_php_profiling_config *config) {
   }
 
   ddprof_ffi_Tag tags_[] = {
-      {.name = to_byteslice("language"), .value = to_byteslice("php")},
-      {.name = to_byteslice("service"),
-       .value = sv_to_byteslice(config->service)},
-      {.name = to_byteslice("env"), .value = sv_to_byteslice(config->env)},
-      {.name = to_byteslice("version"),
-       .value = sv_to_byteslice(config->version)},
-      {.name = to_byteslice("profiler_version"),
-       .value = to_byteslice(PHP_DATADOG_PROFILING_VERSION)},
-      {.name = to_byteslice("runtime-id"), .value = to_byteslice(runtime_val)},
+      {.name = CHARSLICE_C("language"), .value = CHARSLICE_C("php")},
+      {.name = CHARSLICE_C("service"),
+       .value = sv_to_charslice(config->service)},
+      {.name = CHARSLICE_C("env"), .value = sv_to_charslice(config->env)},
+      {.name = CHARSLICE_C("version"),
+       .value = sv_to_charslice(config->version)},
+      {.name = CHARSLICE_C("profiler_version"),
+       .value = CHARSLICE_C(PHP_DATADOG_PROFILING_VERSION)},
+      {.name = CHARSLICE_C("runtime-id"), .value = to_charslice(runtime_val)},
   };
 
   ddprof_ffi_Slice_tag tags = {.ptr = tags_,
                                .len = sizeof tags_ / sizeof *tags_};
 
   struct ddprof_ffi_NewProfileExporterV3Result exporter_result =
-      ddprof_ffi_ProfileExporterV3_new(to_byteslice("php"), tags,
+      ddprof_ffi_ProfileExporterV3_new(CHARSLICE_C("php"), tags,
                                        config->endpoint);
   if (exporter_result.tag == DDPROF_FFI_NEW_PROFILE_EXPORTER_V3_RESULT_ERR) {
     const char *str =

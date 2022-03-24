@@ -8,10 +8,8 @@ void datadog_php_profiling_config_default_ctor(
       .profiling_enabled = false,
       .profiling_experimental_cpu_enabled = false,
       .profiling_log_level = DATADOG_PHP_LOG_OFF,
-      .endpoint = ddprof_ffi_EndpointV3_agent((ddprof_ffi_Slice_u8){
-          .len = sizeof("http://localhost:8126") - 1,
-          .ptr = (const uint8_t *)"http://localhost:8126",
-      }),
+      .endpoint = ddprof_ffi_EndpointV3_agent(
+          DDPROF_FFI_CHARSLICE_C("http://localhost:8126")),
       .env = DATADOG_PHP_STRING_VIEW_INIT,
       .service = DATADOG_PHP_STRING_VIEW_INIT,
       .version = DATADOG_PHP_STRING_VIEW_INIT,
@@ -19,24 +17,17 @@ void datadog_php_profiling_config_default_ctor(
   *config = tmp;
 }
 
-static ddprof_ffi_ByteSlice
+static ddprof_ffi_CharSlice
 profiling_config_endpoint_str(datadog_php_arena *arena,
                               const datadog_php_profiling_env *env) {
-  const char *localhost = "http://localhost:8126";
-  ddprof_ffi_ByteSlice default_endpoint = {
-      .ptr = (const uint8_t *)localhost,
-      .len = strlen(localhost),
-  };
+  ddprof_ffi_CharSlice default_endpoint = DDPROF_FFI_CHARSLICE_C("http://localhost:8126");
 
   // todo: DD_SITE + DD_API_KEY
 
   // prioritize URL over HOST + PORT
   datadog_php_string_view url = env->trace_agent_url;
   if (url.len) {
-    return (ddprof_ffi_ByteSlice){
-        .ptr = (const uint8_t *)url.ptr,
-        .len = url.len,
-    };
+    return (ddprof_ffi_CharSlice){.ptr = url.ptr, .len = url.len};
   }
 
   datadog_php_string_view env_host = env->agent_host;
@@ -63,7 +54,7 @@ profiling_config_endpoint_str(datadog_php_arena *arena,
     return default_endpoint;
   }
 
-  return (ddprof_ffi_ByteSlice){
+  return (ddprof_ffi_CharSlice){
       .ptr = buffer,
       .len = size,
   };
