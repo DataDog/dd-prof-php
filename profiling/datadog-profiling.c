@@ -277,14 +277,3 @@ void datadog_profiling_message_handler(int message, void *arg) {
     }
   }
 }
-
-bool datadog_php_string_view_is_boolean_true(string_view_t str) {
-  size_t len = str.len;
-  if (len > 0 && len < 5) {
-    const char *truthy[] = {"1", "on", "yes", "true"};
-    // Conveniently, by pure luck len - 1 is the index for that string.
-    return memcmp(str.ptr, truthy[len - 1], len) == 0;
-  } else {
-    return false;
-  }
-}

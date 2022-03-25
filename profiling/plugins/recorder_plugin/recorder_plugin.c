@@ -18,12 +18,8 @@
 
 #define CHARSLICE_C(str) DDPROF_FFI_CHARSLICE_C(str)
 
-static ddprof_ffi_CharSlice to_charslice(const char *str) {
+static ddprof_ffi_CharSlice charslice_from_cstr(const char *str) {
   return (ddprof_ffi_CharSlice){str, strlen(str)};
-}
-
-static ddprof_ffi_CharSlice sv_to_charslice(datadog_php_string_view view) {
-  return (ddprof_ffi_CharSlice){view.ptr, view.len};
 }
 
 atomic_bool datadog_php_profiling_recorder_enabled = false;
@@ -477,14 +473,13 @@ recorder_first_activate_helper(const datadog_php_profiling_config *config) {
 
   ddprof_ffi_Tag tags_[] = {
       {.name = CHARSLICE_C("language"), .value = CHARSLICE_C("php")},
-      {.name = CHARSLICE_C("service"),
-       .value = sv_to_charslice(config->service)},
-      {.name = CHARSLICE_C("env"), .value = sv_to_charslice(config->env)},
-      {.name = CHARSLICE_C("version"),
-       .value = sv_to_charslice(config->version)},
+      {.name = CHARSLICE_C("service"), .value = config->service},
+      {.name = CHARSLICE_C("env"), .value = config->env},
+      {.name = CHARSLICE_C("version"), .value = config->version},
       {.name = CHARSLICE_C("profiler_version"),
-       .value = CHARSLICE_C(PHP_DATADOG_PROFILING_VERSION)},
-      {.name = CHARSLICE_C("runtime-id"), .value = to_charslice(runtime_val)},
+       .value = charslice_from_cstr(PHP_DATADOG_PROFILING_VERSION)},
+      {.name = CHARSLICE_C("runtime-id"),
+       .value = charslice_from_cstr(runtime_val)},
   };
 
   ddprof_ffi_Slice_tag tags = {.ptr = tags_,

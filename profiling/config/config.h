@@ -13,9 +13,9 @@ typedef struct datadog_php_profiling_config_s {
   bool profiling_experimental_cpu_enabled;
   datadog_php_log_level profiling_log_level;
   ddprof_ffi_EndpointV3 endpoint;
-  datadog_php_string_view env;
-  datadog_php_string_view service;
-  datadog_php_string_view version;
+  ddprof_ffi_CharSlice env;
+  ddprof_ffi_CharSlice service;
+  ddprof_ffi_CharSlice version;
 } datadog_php_profiling_config;
 
 void datadog_php_profiling_config_default_ctor(

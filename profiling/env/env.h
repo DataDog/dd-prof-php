@@ -4,17 +4,18 @@
 #include <SAPI.h>
 #include <components/arena/arena.h>
 #include <components/string_view/string_view.h>
+#include <ddprof/ffi.h>
 
 typedef struct datadog_php_profiling_env_s {
-  datadog_php_string_view agent_host;
-  datadog_php_string_view env;
-  datadog_php_string_view profiling_enabled;
-  datadog_php_string_view profiling_experimental_cpu_enabled;
-  datadog_php_string_view profiling_log_level;
-  datadog_php_string_view service;
-  datadog_php_string_view trace_agent_port;
-  datadog_php_string_view trace_agent_url;
-  datadog_php_string_view version;
+  ddprof_ffi_CharSlice agent_host;
+  ddprof_ffi_CharSlice env;
+  ddprof_ffi_CharSlice profiling_enabled;
+  ddprof_ffi_CharSlice profiling_experimental_cpu_enabled;
+  ddprof_ffi_CharSlice profiling_log_level;
+  ddprof_ffi_CharSlice service;
+  ddprof_ffi_CharSlice trace_agent_port;
+  ddprof_ffi_CharSlice trace_agent_url;
+  ddprof_ffi_CharSlice version;
 } datadog_php_profiling_env;
 
 #if __cplusplus

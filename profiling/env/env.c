@@ -19,7 +19,7 @@ datadog_php_profiling_getenvs(datadog_php_profiling_env *env,
 
   struct {
     const char *name;
-    datadog_php_string_view *value;
+    ddprof_ffi_CharSlice *value;
   } envs[] = {
       {"DD_AGENT_HOST", &env->agent_host},
       {"DD_ENV", &env->env},
@@ -37,11 +37,6 @@ datadog_php_profiling_getenvs(datadog_php_profiling_env *env,
   tsrm_env_lock();
 #endif
 
-  /* An alignment of max_align_t should be good enough for any operation this
-   * pointer may be passed to, but profiling isn't intentionally relying on it.
-   */
-  static const uint32_t align = _Alignof(max_align_t);
-
   size_t i; // declared out-of-loop because of env unlock before returning
   size_t n = sizeof envs / sizeof envs[0];
   for (i = 0; i != n; ++i) {
@@ -57,18 +52,13 @@ datadog_php_profiling_getenvs(datadog_php_profiling_env *env,
     }
 
     datadog_php_string_view view = datadog_php_string_view_from_cstr(val);
-    uint8_t *bytes = datadog_php_arena_alloc(arena, view.len + 1, align);
+    const char *bytes = datadog_php_arena_alloc_str(arena, view.len, view.ptr);
     if (!bytes) {
       break;
     }
 
-    /* The extra byte is safe to copy, as the getenv functions return a
-     * pointer to char with the length encoded by being null terminated.
-     */
-    memcpy(bytes, view.ptr, view.len + 1);
-
     envs[i].value->len = view.len;
-    envs[i].value->ptr = (const char *)bytes;
+    envs[i].value->ptr = bytes;
   }
 
 #if PHP_VERSION_ID >= 70400
