@@ -3,6 +3,7 @@ extern "C" {
 }
 
 #include <catch2/catch.hpp>
+#include <cstring>
 
 TEST_CASE("new and delete", "[arena]") {
   alignas(32) static uint8_t buffer[1024];
@@ -100,6 +101,55 @@ TEST_CASE("allocation alignment capacity", "[arena]") {
   // This allocation would fit except for its alignment
   uint8_t *j = datadog_php_arena_alloc(arena, 7, 2);
   REQUIRE(!j);
+
+  datadog_php_arena_delete(arena);
+}
+
+TEST_CASE("string allocation", "[arena]") {
+  alignas(16) uint8_t bytes[64];
+
+  datadog_php_arena *arena = datadog_php_arena_new(sizeof bytes, bytes);
+  REQUIRE(arena);
+
+  /* A 7 + 1 length string was chosen on purpose to make the next allocation
+   * easy to align for math used later on.
+   */
+  const char *datadog = "datadog";
+
+  char *copy =
+      datadog_php_arena_alloc_str(arena, strlen(datadog), datadog);
+  CHECK(copy);
+
+  // `copy` should have a unique address...
+  REQUIRE((void*) copy != (void*)datadog);
+
+  // ...but should be equal.
+  REQUIRE(memcmp(copy, datadog, strlen(datadog)) == 0);
+
+  /* Calculate how much space remains to make an allocation fail. The earlier
+   * comment about alignment comes into play here too.
+   */
+  size_t remaining = sizeof bytes - (copy - (char*)bytes) - strlen(copy) - 1;
+
+  // The buffer needs to be large enough to have remaining bytes.
+  REQUIRE(remaining > 0);
+
+  void *obj = malloc(remaining);
+  REQUIRE(obj);
+  memset(obj, 'd', remaining);
+
+  // Since alloc_str will null-terminate, remaining + 1 will push it over.
+  char *obj2 = datadog_php_arena_alloc_str(arena, remaining, (char*)obj);
+  CHECK(!obj2);
+  free(obj);
+
+  /* Due to the empty string optimization, we should be able to allocate at
+   * least remaining + 1 empty strings, though.
+   */
+  for (size_t i = 0; i != remaining + 1; ++i) {
+    INFO("Loop iteration " << i)
+    REQUIRE(datadog_php_arena_alloc_str(arena, 0, datadog));
+  }
 
   datadog_php_arena_delete(arena);
 }
