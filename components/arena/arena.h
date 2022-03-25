@@ -65,6 +65,17 @@ __attribute__((nonnull(1))) void
 datadog_php_arena_reset(datadog_php_arena *arena);
 
 /**
+ * Allocates at least `size` + 1 bytes from the `arena` suitably aligned for a
+ * `char *`, copies `size` bytes from `str` into the allocated object, and adds
+ * a null byte at the end.
+ *
+ * Returns NULL if there is insufficient space in the arena.
+ */
+__attribute__((nonnull)) char *
+datadog_php_arena_alloc_str(datadog_php_arena *arena, uint32_t size,
+                            const char str[C_STATIC(size)]);
+
+/**
  * Returns the number of bytes to add to `ptr` to align it to `align`. Only
  * pass powers of 2 for `align`!
  */
