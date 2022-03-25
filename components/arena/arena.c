@@ -2,6 +2,7 @@
 
 #include <stddef.h>
 #include <stdint.h>
+#include <string.h>
 
 struct datadog_php_arena_s {
   uint32_t offset, capacity;
@@ -77,6 +78,27 @@ datadog_php_arena *datadog_php_arena_new(uint32_t len,
   allocator->start = obj + sizeof(datadog_php_arena);
 
   return allocator;
+}
+
+char *datadog_php_arena_alloc_str(datadog_php_arena *arena, uint32_t size,
+                                  const char str[static size]) {
+  // optimize for empty string case
+  if (size == 0) {
+    return "";
+  }
+
+  // The function is returning a `char *`, so it needs to be aligned as such.
+  uint32_t align = _Alignof(char *);
+
+  // Always null-terminate the string since we're in C and that's useful.
+  uint32_t bytes = size + 1;
+
+  char *obj = (char *)datadog_php_arena_alloc(arena, bytes, align);
+  if (obj) {
+    memcpy(obj, str, size);
+    obj[size] = '\0';
+  }
+  return obj;
 }
 
 uint8_t *datadog_php_arena_alloc(datadog_php_arena *arena, uint32_t size,
