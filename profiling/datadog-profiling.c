@@ -23,10 +23,11 @@
 #include "plugins/recorder_plugin/recorder_plugin.h"
 #include "plugins/stack_collector_plugin/stack_collector_plugin.h"
 
-// These type names are long, let's shorten them up
+// These names are long, let's shorten them up.
 typedef datadog_php_log_level log_level_t;
 typedef datadog_php_sapi sapi_t;
 typedef datadog_php_string_view string_view_t;
+#define CHARSLICE_C(str) DDPROF_FFI_CHARSLICE_C(str)
 
 static uv_once_t first_activate_once = UV_ONCE_INIT;
 static uint8_t profiling_env_storage[4096];
@@ -161,6 +162,71 @@ int datadog_profiling_startup(zend_extension *extension) {
   return SUCCESS;
 }
 
+static void
+datadog_php_profiling_enrich_tags(datadog_php_profiling_config *config) {
+  // Diagnose configured tags.
+  if (config->tags.error_message) {
+    struct ddprof_ffi_Vec_u8 *message = config->tags.error_message;
+    datadog_php_string_view messages[] = {
+        DATADOG_PHP_STRING_VIEW_LITERAL("[Datadog Profiling] "),
+        {.ptr = (const char *)message->ptr, .len = message->len},
+    };
+    size_t n_messages = sizeof messages / sizeof messages[0];
+    prof_logger.logv(DATADOG_PHP_LOG_WARN, n_messages, messages);
+  }
+
+  // Add static tags and ones based on configuration.
+  struct tag {
+    ddprof_ffi_CharSlice key, value;
+  } tags_[] = {
+      {CHARSLICE_C("language"), CHARSLICE_C("php")},
+      {CHARSLICE_C("profiler_version"),
+       {
+           .ptr = PHP_DATADOG_PROFILING_VERSION,
+           .len = strlen(PHP_DATADOG_PROFILING_VERSION),
+       }},
+      {CHARSLICE_C("service"), config->service},
+      {CHARSLICE_C("env"), config->env},
+      {CHARSLICE_C("version"), config->version},
+  };
+
+  for (unsigned i = 0; i != sizeof tags_ / sizeof tags_[0]; ++i) {
+    struct tag *tag = &tags_[i];
+
+    /* Tags like service and version come from env vars which might not be set,
+     * so skip them if we don't have a value.
+     */
+    if (tag->value.len == 0 || !tag->value.ptr) {
+      datadog_php_string_view messages[] = {
+          DATADOG_PHP_STRING_VIEW_LITERAL(
+              "[Datadog Profiling] Tag had no value: "),
+          {.len = tag->key.len, .ptr = tag->key.ptr},
+      };
+      size_t n_messages = sizeof messages / sizeof *messages;
+      prof_logger.logv(DATADOG_PHP_LOG_DEBUG, n_messages, messages);
+      continue;
+    }
+
+    struct ddprof_ffi_PushTagResult result =
+        ddprof_ffi_Vec_tag_push(&config->tags.tags, tag->key, tag->value);
+
+    if (result.tag == DDPROF_FFI_PUSH_TAG_RESULT_ERR) {
+      // All of our own tags should be valid.
+      datadog_php_string_view messages[] = {
+          DATADOG_PHP_STRING_VIEW_LITERAL(
+              "[Datadog Profiling] Internal configuration error: "),
+          {
+              .len = result.err.len,
+              .ptr = (const char *)result.err.ptr,
+          },
+      };
+      size_t n_messages = sizeof messages / sizeof messages[0];
+      prof_logger.logv(DATADOG_PHP_LOG_WARN, n_messages, messages);
+    }
+    ddprof_ffi_PushTagResult_drop(result);
+  }
+}
+
 static void datadog_profiling_first_activate(void) {
   datadog_php_profiling_config_default_ctor(&profiling_config);
   datadog_php_arena *arena = datadog_php_arena_new(sizeof profiling_env_storage,
@@ -193,6 +259,9 @@ static void datadog_profiling_first_activate(void) {
 
   // Logging plugin must be initialized before diagnosing things
   diagnose_profiling_enabled(datadog_profiling_enabled);
+
+  // Diagnose DD_TAGS, add some static tags, and some from config.
+  datadog_php_profiling_enrich_tags(&profiling_config);
 
   datadog_php_string_view module =
       datadog_php_string_view_from_cstr(sapi_module.name);
