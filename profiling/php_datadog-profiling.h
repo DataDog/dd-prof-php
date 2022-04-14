@@ -7,7 +7,7 @@
 #include <Zend/zend_portability.h>
 #include <components/uuid/uuid.h>
 
-#define PHP_DATADOG_PROFILING_VERSION "0.5.1"
+#define PHP_DATADOG_PROFILING_VERSION "0.6.0-rc.1"
 
 int datadog_profiling_startup(zend_extension *);
 void datadog_profiling_activate(void);
