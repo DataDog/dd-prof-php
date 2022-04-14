@@ -18,10 +18,6 @@
 
 #define CHARSLICE_C(str) DDPROF_FFI_CHARSLICE_C(str)
 
-static ddprof_ffi_CharSlice charslice_from_cstr(const char *str) {
-  return (ddprof_ffi_CharSlice){str, strlen(str)};
-}
-
 atomic_bool datadog_php_profiling_recorder_enabled = false;
 bool datadog_php_profiling_cpu_time_enabled = false;
 
@@ -31,6 +27,7 @@ bool datadog_php_profiling_cpu_time_enabled = false;
 static uv_thread_t thread_id_v, *thread_id = NULL;
 static datadog_php_channel channel;
 static ddprof_ffi_ProfileExporterV3 *exporter = NULL;
+static const datadog_php_profiling_config *global_config = NULL;
 
 typedef struct record_msg_s record_msg;
 
@@ -117,35 +114,63 @@ static instant instant_now(void) {
 static bool ddprof_ffi_export(datadog_php_static_logger *logger,
                               const struct ddprof_ffi_Profile *profile,
                               uint64_t timeout_ms) {
-  struct ddprof_ffi_EncodedProfile *encoded_profile =
+  ddprof_ffi_SerializeResult serialize_result =
       ddprof_ffi_Profile_serialize(profile);
-  if (!encoded_profile) {
+  if (serialize_result.tag == DDPROF_FFI_SERIALIZE_RESULT_ERR) {
     logger->log_cstr(DATADOG_PHP_LOG_WARN,
                      "[Datadog Profiling] Failed to serialize profile.");
+    ddprof_ffi_SerializeResult_drop(serialize_result);
     return false;
   }
+
+  struct ddprof_ffi_EncodedProfile *encoded_profile = &serialize_result.ok;
 
   ddprof_ffi_Timespec start = encoded_profile->start;
   ddprof_ffi_Timespec end = encoded_profile->end;
 
   ddprof_ffi_File files_[] = {{
       .name = CHARSLICE_C("profile.pprof"),
-      .file =
-          (ddprof_ffi_ByteSlice){
-              .ptr = encoded_profile->buffer.ptr,
-              .len = encoded_profile->buffer.len,
-          },
+      .file = ddprof_ffi_Vec_u8_as_slice(&encoded_profile->buffer),
   }};
 
-  struct ddprof_ffi_Slice_file files = {.ptr = files_,
-                                        .len = sizeof files_ / sizeof *files_};
+  struct ddprof_ffi_Slice_file files = {
+      .ptr = files_,
+      .len = sizeof files_ / sizeof *files_,
+  };
+  // needs to outlive tags
+  char runtime_val[37] = {0};
+
+  ddprof_ffi_Vec_tag tags = ddprof_ffi_Vec_tag_new();
+  {
+    datadog_php_uuid runtime_id = datadog_profiling_runtime_id();
+    if (!datadog_php_uuid_is_nil(runtime_id)) {
+      datadog_php_uuid_encode36(runtime_id, runtime_val);
+
+      ddprof_ffi_CharSlice val = {.ptr = runtime_val,
+                                  .len = strlen(runtime_val)};
+      struct ddprof_ffi_PushTagResult result =
+          ddprof_ffi_Vec_tag_push(&tags, CHARSLICE_C("runtime-id"), val);
+
+      if (result.tag == DDPROF_FFI_PUSH_TAG_RESULT_ERR) {
+        datadog_php_string_view message = {
+            .len = result.err.len,
+            .ptr = (const char *)result.err.ptr,
+        };
+        logger->log(DATADOG_PHP_LOG_WARN, message);
+      }
+
+      ddprof_ffi_PushTagResult_drop(result);
+    }
+  }
 
   ddprof_ffi_Request *request = ddprof_ffi_ProfileExporterV3_build(
-      exporter, start, end, files, timeout_ms);
+      exporter, start, end, files, &tags, timeout_ms);
+  ddprof_ffi_Vec_tag_drop(tags);
+
   bool succeeded = false;
   if (request) {
     struct ddprof_ffi_SendResult result =
-        ddprof_ffi_ProfileExporterV3_send(exporter, request);
+        ddprof_ffi_ProfileExporterV3_send(exporter, request, NULL);
 
     if (result.tag == DDPROF_FFI_SEND_RESULT_FAILURE) {
       datadog_php_string_view messages[2] = {
@@ -173,11 +198,14 @@ static bool ddprof_ffi_export(datadog_php_static_logger *logger,
         logger->logv(log_level, 2, messages);
       }
     }
+
+    ddprof_ffi_SendResult_drop(result);
   } else {
     logger->log_cstr(DATADOG_PHP_LOG_WARN,
                      "[Datadog Profiling] Failed to create HTTP request.");
   }
-  ddprof_ffi_EncodedProfile_delete(encoded_profile);
+
+  ddprof_ffi_SerializeResult_drop(serialize_result);
   return succeeded;
 }
 
@@ -455,8 +483,8 @@ void datadog_php_recorder_plugin_shutdown(zend_extension *extension) {
 #define SV(literal)                                                            \
   (datadog_php_string_view) { sizeof(literal) - 1, literal }
 
-static bool
-recorder_first_activate_helper(const datadog_php_profiling_config *config) {
+static bool recorder_first_activate_helper() {
+  const datadog_php_profiling_config *config = global_config;
   bool success = datadog_php_channel_ctor(&channel, CHANNEL_CAPACITY);
   if (!success) {
     return false;
@@ -465,29 +493,11 @@ recorder_first_activate_helper(const datadog_php_profiling_config *config) {
   datadog_php_profiling_cpu_time_enabled =
       config->profiling_experimental_cpu_enabled;
 
-  datadog_php_uuid runtime_id = datadog_profiling_runtime_id();
-  char runtime_val[37] = {0};
-  if (!datadog_php_uuid_is_nil(runtime_id)) {
-    datadog_php_uuid_encode36(runtime_id, runtime_val);
-  }
-
-  ddprof_ffi_Tag tags_[] = {
-      {.name = CHARSLICE_C("language"), .value = CHARSLICE_C("php")},
-      {.name = CHARSLICE_C("service"), .value = config->service},
-      {.name = CHARSLICE_C("env"), .value = config->env},
-      {.name = CHARSLICE_C("version"), .value = config->version},
-      {.name = CHARSLICE_C("profiler_version"),
-       .value = charslice_from_cstr(PHP_DATADOG_PROFILING_VERSION)},
-      {.name = CHARSLICE_C("runtime-id"),
-       .value = charslice_from_cstr(runtime_val)},
-  };
-
-  ddprof_ffi_Slice_tag tags = {.ptr = tags_,
-                               .len = sizeof tags_ / sizeof *tags_};
-
+  ddprof_ffi_CharSlice family = CHARSLICE_C("php");
+  const ddprof_ffi_Vec_tag *tags = &config->tags.tags;
   struct ddprof_ffi_NewProfileExporterV3Result exporter_result =
-      ddprof_ffi_ProfileExporterV3_new(CHARSLICE_C("php"), tags,
-                                       config->endpoint);
+      ddprof_ffi_ProfileExporterV3_new(family, tags, config->endpoint);
+
   if (exporter_result.tag == DDPROF_FFI_NEW_PROFILE_EXPORTER_V3_RESULT_ERR) {
     const char *str =
         "[Datadog Profiling] Failed to start; could not create HTTP uploader: ";
@@ -497,7 +507,7 @@ recorder_first_activate_helper(const datadog_php_profiling_config *config) {
     };
     prof_logger.logv(DATADOG_PHP_LOG_ERROR, sizeof messages / sizeof *messages,
                      messages);
-    ddprof_ffi_NewProfileExporterV3Result_dtor(exporter_result);
+    ddprof_ffi_NewProfileExporterV3Result_drop(exporter_result);
     return false;
   }
 
@@ -523,8 +533,9 @@ recorder_first_activate_helper(const datadog_php_profiling_config *config) {
 
 void datadog_php_recorder_plugin_first_activate(
     const datadog_php_profiling_config *config) {
+  global_config = config;
   datadog_php_profiling_recorder_enabled =
-      config->profiling_enabled && recorder_first_activate_helper(config);
+      config->profiling_enabled && recorder_first_activate_helper();
 }
 
 static int64_t

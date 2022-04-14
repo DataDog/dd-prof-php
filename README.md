@@ -49,7 +49,7 @@ you will need:
  - pkg-config
  - PHP 7.1+
  - libuv (todo: min version?) and its headers
- - libddprof v0.5 for your platform. This is a Rust library, so I recommend
+ - libddprof v0.6 for your platform. This is a Rust library, so I recommend
    using the pre-built artifacts available at
    [Datadog/libddprof](https://github.com/DataDog/libddprof/releases) so you
    don't need a Rust toolchain.

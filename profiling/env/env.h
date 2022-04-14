@@ -13,6 +13,7 @@ typedef struct datadog_php_profiling_env_s {
   ddprof_ffi_CharSlice profiling_experimental_cpu_enabled;
   ddprof_ffi_CharSlice profiling_log_level;
   ddprof_ffi_CharSlice service;
+  ddprof_ffi_CharSlice tags;
   ddprof_ffi_CharSlice trace_agent_port;
   ddprof_ffi_CharSlice trace_agent_url;
   ddprof_ffi_CharSlice version;

@@ -99,5 +99,10 @@ void datadog_php_profiling_config_ctor(datadog_php_profiling_config *config,
   config->endpoint = profiling_config_endpoint(arena, env);
   config->env = env->env;
   config->service = env->service;
+
+  /* We'll add some tags to this, so it will hold more than strictly what the
+   * DD_TAGS env var held.
+   */
+  config->tags = ddprof_ffi_Vec_tag_parse(env->tags);
   config->version = env->version;
 }
