@@ -14,8 +14,8 @@ sudo apt-get install -y \
   libxml2-dev \
   shtool
 
-PHP_VERSION="${PHP_VERSION:-8.0.15}"
-PHP_SHA256="${PHP_SHA256:-47f0be6188b05390bb457eb1968ea19463acada79650afc35ec763348d5c2370}"
+PHP_VERSION="${PHP_VERSION:-8.0.17}"
+PHP_SHA256="${PHP_SHA256:-bdbd792901c156c4d1710c9d266732d3c17f6ff63850d6660b9d8d3411188424}"
 phptar="php-${PHP_VERSION}.tar.gz"
 
 cd /tmp
@@ -46,13 +46,13 @@ tar -x --strip-components 1 \
   -f libddprof-x86_64-unknown-linux-gnu.tar.gz \
   -C "$DDProf_ROOT"
 
-curl -OL https://github.com/Kitware/CMake/releases/download/v3.22.2/cmake-3.22.2-linux-x86_64.tar.gz
-sha256sum="38b3befdee8fd2bac06954e2a77cb3072e6833c69d8cc013c0a3b26f1cfdfe37"
-echo "$sha256sum  cmake-3.22.2-linux-x86_64.tar.gz"
+curl -OL https://github.com/Kitware/CMake/releases/download/v3.22.4/cmake-3.22.4-linux-x86_64.tar.gz
+sha256sum=""bb70a78b464bf59c4188250f196ad19996f2dafd61c25e7c07f105cf5a95d228
+echo "$sha256sum  cmake-3.22.4-linux-x86_64.tar.gz"
 sudo mkdir -p /opt/cmake
 sudo chown $user /opt/cmake
 tar -x --strip-components 1 \
-  -f cmake-3.22.2-linux-x86_64.tar.gz \
+  -f cmake-3.22.4-linux-x86_64.tar.gz \
   -C /opt/cmake
 PATH="/opt/cmake/bin:$PATH"
 
