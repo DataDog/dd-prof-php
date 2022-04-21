@@ -36,8 +36,8 @@ sudo make install
 PATH="/opt/php/${PHP_VERSION}/bin:$PATH"
 
 cd /tmp
-curl -OL https://github.com/DataDog/libddprof/releases/download/v0.3.0/libddprof-x86_64-unknown-linux-gnu.tar.gz
-sha256sum="d9c64567e7ef5f957581dd81892b144b81e1f52fdf5671430c7af0b039b48929"
+curl -OL https://github.com/DataDog/libddprof/releases/download/v0.6.0/libddprof-x86_64-unknown-linux-gnu.tar.gz
+sha256sum="8eaec92d14bcfa8839843ba2ddfeae254804e087a4984985132a508d6f841645"
 echo "$sha256sum  libddprof-x86_64-unknown-linux-gnu.tar.gz" | sha256sum -c
 export DDProf_ROOT="/opt/libddprof"
 sudo mkdir -p "$DDProf_ROOT"
