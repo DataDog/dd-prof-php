@@ -103,6 +103,8 @@ add_library(
   profiling/plugins/recorder_plugin/recorder_plugin.c
   profiling/plugins/stack_collector_plugin/stack_collector_plugin.c)
 
+target_compile_features(datadog-profiling PUBLIC c_std_11)
+
 #[[ Note that linking directly to libc dynamically is actually important!
     Without it, on Alpine it will sometimes link libc in statically, and then
     we hide the symbols with a linker script, and then __vdsosym will fail to
@@ -115,6 +117,7 @@ target_link_libraries(
           datadog-php-config
           datadog-php-env
           datadog-php-log
+          datadog-php-once
           datadog_php_sapi
           datadog-php-stack-collector
           datadog-php-stack-sample
