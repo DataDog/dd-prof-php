@@ -57,5 +57,13 @@ datadog_profiling_hybrid_startup(zend_extension *extension) {
   if (datadog_profiling_startup(extension) != SUCCESS) {
     return FAILURE;
   }
+
+  /* Since the module_entry and extension both come from the same DL_HANDLE,
+   * we need to ensure that the handle lives as long as both. The extension
+   * lives longer than the module_entry, so the extension owns the DL_HANDLE,
+   * and the module_entry just has NULL.
+   */
+  ZEND_ASSERT(datadog_profiling_module_entry.handle == NULL);
+
   return zend_startup_module(&datadog_profiling_module_entry);
 }
