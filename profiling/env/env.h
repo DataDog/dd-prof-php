@@ -19,17 +19,24 @@ typedef struct datadog_php_profiling_env_s {
   ddprof_ffi_CharSlice version;
 } datadog_php_profiling_env;
 
-#if __cplusplus
-#define C_STATIC(...)
-#else
-#define C_STATIC(...) static __VA_ARGS__
-#endif
+inline void
+datadog_php_profiling_env_default_ctor(datadog_php_profiling_env *env) {
+  ddprof_ffi_CharSlice empty = DDPROF_FFI_CHARSLICE_C("");
+  env->agent_host = empty;
+  env->env = empty;
+  env->profiling_enabled = empty;
+  env->profiling_experimental_cpu_enabled = empty;
+  env->profiling_log_level = empty;
+  env->service = empty;
+  env->tags = empty;
+  env->trace_agent_port = empty;
+  env->trace_agent_url = empty;
+  env->version = empty;
+}
 
 __attribute__((nonnull(1, 2, 3))) bool
 datadog_php_profiling_getenvs(datadog_php_profiling_env *env,
                               const sapi_module_struct *sapi,
                               datadog_php_arena *arena);
-
-#undef C_STATIC
 
 #endif // DATADOG_PHP_PROFILING_ENV_H

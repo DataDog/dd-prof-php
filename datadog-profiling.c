@@ -2,7 +2,8 @@
 
 #include <php.h>
 
-ZEND_COLD int datadog_profiling_hybrid_startup(zend_extension *extension);
+ZEND_COLD zend_result
+datadog_profiling_hybrid_startup(zend_extension *extension);
 
 /* This is used by the engine to ensure that the extension is built against
  * the same version as the engine. It must be named `extension_version_info`.
@@ -51,7 +52,18 @@ static zend_module_entry datadog_profiling_module_entry = {
     STANDARD_MODULE_PROPERTIES,
 };
 
-ZEND_COLD int datadog_profiling_hybrid_startup(zend_extension *extension) {
-  (void)datadog_profiling_startup(extension);
+ZEND_COLD zend_result
+datadog_profiling_hybrid_startup(zend_extension *extension) {
+  if (datadog_profiling_startup(extension) != SUCCESS) {
+    return FAILURE;
+  }
+
+  /* Since the module_entry and extension both come from the same DL_HANDLE,
+   * we need to ensure that the handle lives as long as both. The extension
+   * lives longer than the module_entry, so the extension owns the DL_HANDLE,
+   * and the module_entry just has NULL.
+   */
+  ZEND_ASSERT(datadog_profiling_module_entry.handle == NULL);
+
   return zend_startup_module(&datadog_profiling_module_entry);
 }

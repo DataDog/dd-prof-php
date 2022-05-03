@@ -12,6 +12,9 @@ typedef char getenv_char;
 #error Unexpected PHP_VESION_ID for getenv detection.
 #endif
 
+extern inline void
+datadog_php_profiling_env_default_ctor(datadog_php_profiling_env *env);
+
 __attribute__((nonnull(1, 2, 3))) bool
 datadog_php_profiling_getenvs(datadog_php_profiling_env *env,
                               const sapi_module_struct *sapi,

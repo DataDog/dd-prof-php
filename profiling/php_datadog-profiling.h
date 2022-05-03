@@ -7,9 +7,13 @@
 #include <Zend/zend_portability.h>
 #include <components/uuid/uuid.h>
 
+// C11 allows a typedef to be declared multiple times as long as it denotes the
+// same type as it currently does.
+typedef ZEND_RESULT_CODE zend_result;
+
 #define PHP_DATADOG_PROFILING_VERSION "0.6.0"
 
-int datadog_profiling_startup(zend_extension *);
+zend_result datadog_profiling_startup(zend_extension *);
 void datadog_profiling_activate(void);
 void datadog_profiling_deactivate(void);
 void datadog_profiling_shutdown(zend_extension *);

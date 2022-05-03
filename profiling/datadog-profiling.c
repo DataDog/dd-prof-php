@@ -19,6 +19,7 @@
 #include "config/config.h"
 #include "context.h"
 #include "env/env.h"
+#include "once/once.h"
 #include "plugins/log_plugin/log_plugin.h"
 #include "plugins/recorder_plugin/recorder_plugin.h"
 #include "plugins/stack_collector_plugin/stack_collector_plugin.h"
@@ -29,11 +30,26 @@ typedef datadog_php_sapi sapi_t;
 typedef datadog_php_string_view string_view_t;
 #define CHARSLICE_C(str) DDPROF_FFI_CHARSLICE_C(str)
 
-static uv_once_t first_activate_once = UV_ONCE_INIT;
+/* # Important Notes on Static Storage Initialization
+ * It's fine to initialize values in static storage e.g.
+ *     static int fd = -1;
+ *
+ * HOWEVER, they must be re-initialized in minit or startup, e.g.
+ *     int datadog_profiling_startup(zend_extension *extension) {
+ *         fd = -1;
+ *         // ...
+ *     }
+ *
+ * This is because a SAPI may call minit more than once, such as when Apache
+ * does a reload: it will call mshutdown and re-run the initialization process
+ * without destroying the process, causing minit to be run again BUT static
+ * storage initializers would not be rerun!
+ */
+static struct datadog_php_once_s first_activate_once;
 static uint8_t profiling_env_storage[4096];
 static datadog_php_profiling_env profiling_env;
 static datadog_php_profiling_config profiling_config;
-static datadog_php_uuid runtime_id = DATADOG_PHP_UUID_INIT;
+static datadog_php_uuid runtime_id;
 
 static void datadog_info_print_esc_view(datadog_php_string_view str);
 static void datadog_info_print_esc(const char *str);
@@ -156,7 +172,23 @@ static void sapi_diagnose(sapi_t sapi, datadog_php_string_view pretty_name) {
   }
 }
 
-int datadog_profiling_startup(zend_extension *extension) {
+zend_result datadog_profiling_startup(zend_extension *extension) {
+  // Re-initialize static variables (Apache reload may have occurred)
+  int once_ctor_result = datadog_php_once_ctor(&first_activate_once);
+  if (once_ctor_result != 0) {
+    const char *error = uv_strerror(once_ctor_result);
+    zend_error(
+        E_WARNING,
+        "Datadog Profiling failed to startup; error during datadog_php_once_ctor: %s",
+        error);
+    return FAILURE;
+  }
+
+  memset(profiling_env_storage, 0, sizeof profiling_env_storage);
+  datadog_php_profiling_env_default_ctor(&profiling_env);
+  datadog_php_profiling_config_default_ctor(&profiling_config);
+  datadog_php_uuid_default_ctor(&runtime_id);
+
   datadog_php_stack_collector_startup(extension);
 
   return SUCCESS;
@@ -274,8 +306,7 @@ static void datadog_profiling_first_activate(void) {
 }
 
 void datadog_profiling_activate(void) {
-  uv_once(&first_activate_once, datadog_profiling_first_activate);
-
+  datadog_php_once(&first_activate_once, datadog_profiling_first_activate);
   datadog_php_stack_collector_activate();
 }
 
@@ -284,6 +315,7 @@ void datadog_profiling_deactivate(void) {
 }
 
 void datadog_profiling_shutdown(zend_extension *extension) {
+  datadog_php_once_dtor(&first_activate_once);
   datadog_php_recorder_plugin_shutdown(extension);
   datadog_php_log_plugin_shutdown(extension);
 }
