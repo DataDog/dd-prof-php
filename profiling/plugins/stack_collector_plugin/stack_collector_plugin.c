@@ -3,7 +3,7 @@
 #include "../../context.h"
 #include "../log_plugin/log_plugin.h"
 #include "../recorder_plugin/recorder_plugin.h"
-#include <components/time/time.h>
+#include <components/clocks/clocks.h>
 #include <stack-collector/stack-collector.h>
 
 #include <Zend/zend_execute.h>

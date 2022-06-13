@@ -1,4 +1,4 @@
-add_library(datadog-php-time OBJECT time.c time.h)
+add_library(datadog-php-time OBJECT clocks.c clocks.h)
 
 target_include_directories(
   datadog-php-time PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../..>)

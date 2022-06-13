@@ -1,5 +1,5 @@
-#ifndef DATADOG_PHP_SYSTEM_TIME_H
-#define DATADOG_PHP_SYSTEM_TIME_H
+#ifndef DATADOG_PHP_CLOCKS_H
+#define DATADOG_PHP_CLOCKS_H
 
 #include <stdint.h>
 #include <time.h>
@@ -25,4 +25,4 @@ typedef struct datadog_php_cpu_time_result_s {
 
 datadog_php_cpu_time_result datadog_php_cpu_time_now(void);
 
-#endif // DATADOG_PHP_SYSTEM_TIME_H
+#endif // DATADOG_PHP_CLOCKS_H

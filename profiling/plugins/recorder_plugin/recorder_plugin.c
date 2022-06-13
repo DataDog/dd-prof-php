@@ -6,8 +6,8 @@
 
 #include <components/arena/arena.h>
 #include <components/channel/channel.h>
+#include <components/clocks/clocks.h>
 #include <components/string_view/string_view.h>
-#include <components/time/time.h>
 #include <ddprof/ffi.h>
 #include <php.h>
 #include <stdlib.h>
