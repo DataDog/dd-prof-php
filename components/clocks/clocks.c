@@ -1,4 +1,4 @@
-#include "time.h"
+#include "clocks.h"
 
 #if DATADOG_HAVE_PTHREAD_GETCPUCLOCKID
 
