@@ -141,7 +141,11 @@ datadog_php_profiling_getenvs(datadog_php_profiling_env *env,
         result = datadog_php_profiling_getenv(
             arena, sapi, "DD_PROFILING_EXPERIMENTAL_CPU_ENABLED");
         if (result.tag == DATADOG_PHP_PROFILING_GETENV_ERR) {
-          success = false;
+          if (result.err == DATADOG_PHP_PROFILING_GETENV_ERR_NOVAL) {
+            // fall back to empty string, consider it a success
+          } else if (result.err == DATADOG_PHP_PROFILING_GETENV_ERR_NOMEM) {
+            success = false;
+          }
           break;
         }
         cpu_enabled.ptr = result.ok.ptr;
