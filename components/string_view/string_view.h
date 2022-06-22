@@ -29,7 +29,7 @@ typedef struct datadog_php_string_view {
  *   datadog_php_string_view str = DATADOG_PHP_STRING_VIEW_LITERAL("hello");
  */
 #define DATADOG_PHP_STRING_VIEW_LITERAL(cstr)                                  \
-  { sizeof(cstr) - 1, cstr }
+  { sizeof(cstr) - 1, cstr "" }
 
 /**
  * Converts the C string `cstr` into a string view by getting its length from
