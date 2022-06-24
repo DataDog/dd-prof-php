@@ -428,6 +428,7 @@ void datadog_php_recorder_plugin_main(void) {
   }
 
   while (datadog_php_profiling_recorder_enabled) {
+    uint64_t sample_count = 0;
     uint64_t sleep_for_nanos = period_val;
     instant before = instant_now();
     do {
@@ -437,6 +438,7 @@ void datadog_php_recorder_plugin_main(void) {
         if (message) {
           datadog_php_recorder_add(profile, message);
           free(message);
+          ++sample_count;
         }
       }
       uint64_t duration = instant_elapsed(before);
@@ -444,7 +446,22 @@ void datadog_php_recorder_plugin_main(void) {
       // protect against underflow
     } while (datadog_php_profiling_recorder_enabled && sleep_for_nanos);
 
-    ddprof_ffi_export(&prof_logger, profile, UPLOAD_TIMEOUT_MS);
+    /* If no samples have been collected, then don't report the profile. Some
+     * customers are having millions of profiles per hour, most of which are
+     * empty. At the moment this is just a guess, but I suspect these are
+     * short-lived CLI invocations that are running on a cron close to every
+     * second. When multiplied by many hosts, it quickly escalates too high.
+     *
+     * Aside from the cost, the aggregation feature doesn't work well because
+     * the profiles of interest aren't being chosen, so it essentially shows
+     * no data, despite there being data.
+     */
+    if (sample_count) {
+      ddprof_ffi_export(&prof_logger, profile, UPLOAD_TIMEOUT_MS);
+    } else {
+      const char *msg = "[Datadog Profiling] No profiles to upload.";
+      prof_logger.log_cstr(DATADOG_PHP_LOG_INFO, msg);
+    }
     (void)ddprof_ffi_Profile_reset(profile);
   }
 
