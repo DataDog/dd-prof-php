@@ -163,6 +163,27 @@ static bool ddprof_ffi_export(datadog_php_static_logger *logger,
     }
   }
 
+  /* The SAPI tag can be helpful as a filter. It also would have been useful
+   * in the past to diagnose why we had so many empty profiles. Were these
+   * short-lived CLI jobs on cron? Over-provisioned idle workers? The SAPI
+   * would have at least given us a hint.
+   */
+  if (sapi_module.name != NULL) {
+    ddprof_ffi_CharSlice val = {.ptr = sapi_module.name,
+                                .len = strlen(sapi_module.name)};
+    struct ddprof_ffi_PushTagResult result =
+        ddprof_ffi_Vec_tag_push(&tags, CHARSLICE_C("php.sapi"), val);
+
+    if (result.tag == DDPROF_FFI_PUSH_TAG_RESULT_ERR) {
+      datadog_php_string_view message = {
+          .len = result.err.len,
+          .ptr = (const char *)result.err.ptr,
+      };
+      logger->log(DATADOG_PHP_LOG_WARN, message);
+    }
+    ddprof_ffi_PushTagResult_drop(result);
+  }
+
   ddprof_ffi_Request *request = ddprof_ffi_ProfileExporterV3_build(
       exporter, start, end, files, &tags, timeout_ms);
   ddprof_ffi_Vec_tag_drop(tags);
