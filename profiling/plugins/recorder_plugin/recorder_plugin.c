@@ -172,7 +172,7 @@ static bool ddprof_ffi_export(datadog_php_static_logger *logger,
     ddprof_ffi_CharSlice val = {.ptr = sapi_module.name,
                                 .len = strlen(sapi_module.name)};
     struct ddprof_ffi_PushTagResult result =
-        ddprof_ffi_Vec_tag_push(&tags, CHARSLICE_C("php_sapi"), val);
+        ddprof_ffi_Vec_tag_push(&tags, CHARSLICE_C("php.sapi"), val);
 
     if (result.tag == DDPROF_FFI_PUSH_TAG_RESULT_ERR) {
       datadog_php_string_view message = {
