@@ -34,16 +34,21 @@ typedef struct datadog_php_profiling_getenv_result_s {
  * to the OS's env var if it's not found. The value is copied.
  * Returns an error result if neither source defines the env var, or if the
  * arena has insufficient capacity.
+ *
+ * Only call this if the tsrm_env_lock is held.
  */
 static __attribute__((nonnull(1, 2, 3))) datadog_php_profiling_getenv_result
 datadog_php_profiling_getenv(datadog_php_arena *arena,
                              const sapi_module_struct *sapi, const char *name) {
-  // try the SAPI first
+  /* Try the SAPI first. Note that sapi->getenv doesn't estrdup, it's the
+   * helper function sapi_getenv that does that. If you use sapi->getenv
+   * directly then you don't have to efree but you do need to copy the env
+   * immediately, which we do when storing in the arena.
+   */
   char *val =
       sapi->getenv ? sapi->getenv((getenv_char *)name, strlen(name)) : NULL;
 
   datadog_php_profiling_getenv_result result;
-  bool needs_efree;
   if (val == NULL) {
     // fall back to the OS
     val = getenv(name);
@@ -53,9 +58,6 @@ datadog_php_profiling_getenv(datadog_php_arena *arena,
       result.err = DATADOG_PHP_PROFILING_GETENV_ERR_NOVAL;
       return result;
     }
-    needs_efree = false;
-  } else {
-    needs_efree = true;
   }
 
   datadog_php_string_view view = datadog_php_string_view_from_cstr(val);
@@ -70,9 +72,6 @@ datadog_php_profiling_getenv(datadog_php_arena *arena,
     result.err = DATADOG_PHP_PROFILING_GETENV_ERR_NOMEM;
   }
 
-  if (needs_efree) {
-    efree(val);
-  }
   return result;
 }
 
