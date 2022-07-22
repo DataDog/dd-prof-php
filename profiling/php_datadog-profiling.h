@@ -11,7 +11,7 @@
 // same type as it currently does.
 typedef ZEND_RESULT_CODE zend_result;
 
-#define PHP_DATADOG_PROFILING_VERSION "0.7.0"
+#define PHP_DATADOG_PROFILING_VERSION "0.7.1-beta.1"
 
 zend_result datadog_profiling_startup(zend_extension *);
 void datadog_profiling_activate(void);
