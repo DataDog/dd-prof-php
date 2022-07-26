@@ -18,7 +18,6 @@ void datadog_profiling_activate(void);
 void datadog_profiling_deactivate(void);
 void datadog_profiling_shutdown(zend_extension *);
 void datadog_profiling_diagnostics(void);
-void datadog_profiling_message_handler(int message, void *arg);
 
 BEGIN_EXTERN_C()
 ZEND_API void datadog_profiling_interrupt_function(struct _zend_execute_data *);
