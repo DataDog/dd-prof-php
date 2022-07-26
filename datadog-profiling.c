@@ -26,7 +26,6 @@ ZEND_API zend_extension zend_extension_entry = {
     .activate = datadog_profiling_activate,
     .deactivate = datadog_profiling_deactivate,
     .shutdown = datadog_profiling_shutdown,
-    .message_handler = datadog_profiling_message_handler,
     .resource_number = -1,
 };
 

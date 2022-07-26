@@ -172,6 +172,19 @@ static void sapi_diagnose(sapi_t sapi, datadog_php_string_view pretty_name) {
   }
 }
 
+void datadog_profiling_find_ddtrace_symbols(void *arg) {
+  zend_extension *extension = (zend_extension *)arg;
+  if (extension->name && strcmp(extension->name, "ddtrace") == 0) {
+    DL_HANDLE handle = extension->handle;
+
+    struct ddtrace_profiling_context (*get_profiling)(void) =
+        DL_FETCH_SYMBOL(handle, "ddtrace_get_profiling_context");
+    if (EXPECTED(get_profiling)) {
+      datadog_profiling_get_profiling_context = get_profiling;
+    }
+  }
+}
+
 zend_result datadog_profiling_startup(zend_extension *extension) {
   // Re-initialize static variables (Apache reload may have occurred)
   int once_ctor_result = datadog_php_once_ctor(&first_activate_once);
@@ -188,6 +201,8 @@ zend_result datadog_profiling_startup(zend_extension *extension) {
   datadog_php_profiling_env_default_ctor(&profiling_env);
   datadog_php_profiling_config_default_ctor(&profiling_config);
   datadog_php_uuid_default_ctor(&runtime_id);
+
+  zend_llist_apply(&zend_extensions, datadog_profiling_find_ddtrace_symbols);
 
   datadog_php_stack_collector_startup(extension);
 
@@ -360,21 +375,3 @@ datadog_profiling_get_profiling_context_null(void) {
 // Default to null implementation to cut down on the number of edges of caller.
 struct ddtrace_profiling_context (*datadog_profiling_get_profiling_context)(
     void) = &datadog_profiling_get_profiling_context_null;
-
-void datadog_profiling_message_handler(int message, void *arg) {
-  if (UNEXPECTED(message != ZEND_EXTMSG_NEW_EXTENSION)) {
-    // There are currently no other defined messages.
-    return;
-  }
-
-  zend_extension *extension = (zend_extension *)arg;
-  if (extension->name && strcmp(extension->name, "ddtrace") == 0) {
-    DL_HANDLE handle = extension->handle;
-
-    struct ddtrace_profiling_context (*get_profiling)(void) =
-        DL_FETCH_SYMBOL(handle, "ddtrace_get_profiling_context");
-    if (EXPECTED(get_profiling)) {
-      datadog_profiling_get_profiling_context = get_profiling;
-    }
-  }
-}
