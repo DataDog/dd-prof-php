@@ -102,6 +102,41 @@ jobs:
           path: /tmp/datadog-profiling.tar.gz
           destination: datadog-profiling.tar.gz
 
+  system-tests:
+    # https://support.circleci.com/hc/en-us/articles/360007324514-How-can-I-use-Docker-volume-mounting-on-CircleCI-
+    machine:
+      image: ubuntu-2004:current
+    resource_class: large
+    steps:
+      - run:
+          name: Install dependancies
+          command: sudo apt-get update
+
+      - run:
+          name: Clone System Tests repo
+          command: git clone https://github.com/DataDog/system-tests.git
+
+      # - run:
+      #     name: Get artifact
+      #     command: |
+      #       TODO: get artifact, and copy it in system-tests/binaries
+
+      - run:
+          name: Build
+          command: |
+            cd system-tests
+            ./build.sh php
+
+      - run:
+          name: Run
+          command: |
+            cd system-tests
+            DD_API_KEY=todo ./run.sh PROFILING
+
+      - store_artifacts:
+          path: system-tests/logs_profiling
+          destination: system-tests.tar.gz
+
 workflows:
   version: 2
 
@@ -111,9 +146,11 @@ workflows:
         equal: [ "nightly", << pipeline.schedule.name >> ]
     jobs:
       - build
+      - system-tests
 
   nightly:
     when:
       equal: [ "nightly", << pipeline.schedule.name >> ]
     jobs:
       - nightly
+      - system-tests
