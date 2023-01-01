@@ -78,3 +78,4 @@ export PHP_EXTENSION_DIR="$(php-config --extension-dir)"
 cp -v cmake-build-release/datadog-profiling.so "${PHP_EXTENSION_DIR?}/"
 echo 'zend_extension = datadog-profiling.so' > "${PHP_INI_DIR?}/datadog-profiling.ini"
 ```
+test

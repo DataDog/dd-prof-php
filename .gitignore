@@ -1,2 +1,3 @@
 .docker-sync.yml
 build/*
+.git/
