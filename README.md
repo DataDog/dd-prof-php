@@ -10,8 +10,9 @@ Supported platforms (all x86-64):
 
 Additionally, it has been developed and tested on MacOS Big Sur (11.6).
 
-The plan for this code is to be eventually merged into
-[Datadog/dd-trace-php](https://github.com/DataDog/dd-trace-php).
+**The plan for this code is to be eventually merged into
+[Datadog/dd-trace-php](https://github.com/DataDog/dd-trace-php) with latest PHP
+8.X releases support.**
 
 ## Installing
 
