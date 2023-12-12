@@ -1,5 +1,5 @@
 > [!CAUTION]
-> This repository has been archived. The PHP profiler moved to the [Datadog/dd-trace-php](https://github.com/DataDog/dd-trace-php) repository.
+> This repository has been archived. The PHP profiler has moved to the [Datadog/dd-trace-php](https://github.com/DataDog/dd-trace-php) repository.
 
 # Datadog Continuous Profiler for PHP
 
