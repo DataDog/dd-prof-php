@@ -1,3 +1,6 @@
+> [!CAUTION]
+> This repository has been archived. The PHP profiler has moved to the [Datadog/dd-trace-php](https://github.com/DataDog/dd-trace-php) repository.
+
 # Datadog Continuous Profiler for PHP
 
 The Datadog PHP profiler is a Zend Extension for PHP 7.1+. Debug and ZTS builds
